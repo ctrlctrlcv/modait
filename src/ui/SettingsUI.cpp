@@ -1,0 +1,344 @@
+#include "SettingsUI.hpp"
+#include <Geode/utils/string.hpp>
+
+SettingsUI* SettingsUI::create() {
+    auto ret = new SettingsUI();
+    if (ret && ret->init(640.0f, 480.0f)) {
+        ret->autorelease();
+        return ret;
+    }
+    CC_SAFE_DELETE(ret);
+    return nullptr;
+}
+
+bool SettingsUI::setup() {
+    // Fondo oscuro
+    auto bg = CCLayerColor::create({16, 16, 22, 255});
+    bg->setContentSize(m_mainLayer->getContentSize());
+    m_mainLayer->addChild(bg);
+
+    // Título
+    auto title = CCLabelBMFont::create("OlkFPC Settings", "bigFont.fnt");
+    title->setScale(0.6f);
+    title->setPosition(320, 450);
+    title->setColor({200, 200, 255});
+    m_mainLayer->addChild(title);
+
+    // Pestañas laterales
+    const char* tabs[] = {"Counter", "Circles", "Sounds", "Scan", "Recording", "Tools"};
+    for (int i = 0; i < 6; ++i) {
+        auto tabLabel = CCLabelBMFont::create(tabs[i], "bigFont.fnt");
+        tabLabel->setScale(0.45f);
+        tabLabel->setColor(i == 0 ? ccColor3B{255, 255, 255} : ccColor3B{100, 100, 120});
+
+        auto btn = CCMenuItemSpriteExtra::create(
+            tabLabel, this, menu_selector(SettingsUI::onTabClicked));
+        btn->setTag(i);
+        btn->setPosition(60, 400 - i * 55);
+
+        auto menu = CCMenu::create();
+        menu->addChild(btn);
+        menu->setPosition(0, 0);
+        m_mainLayer->addChild(menu);
+    }
+
+    // Fondo del contenido
+    m_contentBg = CCLayerColor::create({22, 22, 30, 255}, 500, 420);
+    m_contentBg->setPosition(110, 20);
+    m_mainLayer->addChild(m_contentBg);
+
+    // Crear primera pestaña
+    createCounterTab();
+
+    return true;
+}
+
+void SettingsUI::clearContent() {
+    for (auto n : m_contentNodes) n->removeFromParent();
+    m_contentNodes.clear();
+}
+
+void SettingsUI::onTabClicked(CCObject* sender) {
+    auto btn = dynamic_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!btn) return;
+
+    m_currentTab = btn->getTag();
+    clearContent();
+
+    switch (m_currentTab) {
+        case 0: createCounterTab(); break;
+        case 1: createCirclesTab(); break;
+        case 2: createSoundsTab(); break;
+        case 3: createScanTab(); break;
+        case 4: createRecordingTab(); break;
+        case 5: createToolsTab(); break;
+    }
+
+    // Actualizar colores de las pestañas
+    for (auto child : m_mainLayer->getChildren()) {
+        // ... (lógica de actualización de colores)
+    }
+}
+
+// ============================================================
+//  HELPERS DE UI
+// ============================================================
+
+void SettingsUI::addTitle(const char* text, float y) {
+    auto title = CCLabelBMFont::create(text, "bigFont.fnt");
+    title->setScale(0.4f);
+    title->setPosition(360, y);
+    title->setColor({180, 180, 220});
+    m_contentNodes.push_back(title);
+    m_mainLayer->addChild(title);
+}
+
+void SettingsUI::addDescription(const char* text, float y) {
+    auto desc = CCLabelBMFont::create(text, "chatFont.fnt");
+    desc->setScale(0.3f);
+    desc->setPosition(360, y);
+    desc->setColor({120, 120, 150});
+    m_contentNodes.push_back(desc);
+    m_mainLayer->addChild(desc);
+}
+
+void SettingsUI::addToggle(const char* label, const char* settingKey, float y) {
+    auto mod = Mod::get();
+    bool value = mod->getSettingValue<bool>(settingKey);
+
+    auto lbl = CCLabelBMFont::create(label, "chatFont.fnt");
+    lbl->setScale(0.5f);
+    lbl->setPosition(130, y);
+    lbl->setAnchorPoint({0.0f, 0.5f});
+    m_contentNodes.push_back(lbl);
+    m_mainLayer->addChild(lbl);
+
+    auto toggle = CCMenuItemToggler::create(
+        CCSprite::createWithSpriteFrameName("GJ_checkOff_001.png"),
+        CCSprite::createWithSpriteFrameName("GJ_checkOn_001.png"),
+        this, nullptr);
+    toggle->setPosition(550, y);
+    toggle->setScale(0.7f);
+    toggle->toggle(value);
+
+    auto menu = CCMenu::create();
+    menu->addChild(toggle);
+    menu->setPosition(0, 0);
+    m_contentNodes.push_back(menu);
+    m_mainLayer->addChild(menu);
+}
+
+void SettingsUI::addSlider(const char* label, const char* settingKey,
+                            float min, float max, float y) {
+    auto mod = Mod::get();
+    double value = mod->getSettingValue<double>(settingKey);
+
+    auto lbl = CCLabelBMFont::create(label, "chatFont.fnt");
+    lbl->setScale(0.5f);
+    lbl->setPosition(130, y + 10);
+    lbl->setAnchorPoint({0.0f, 0.5f});
+    m_contentNodes.push_back(lbl);
+    m_mainLayer->addChild(lbl);
+
+    auto slider = Slider::create(this, nullptr, 0.8f);
+    slider->setPosition(360, y - 10);
+    slider->setValue(static_cast<float>((value - min) / (max - min)));
+    m_contentNodes.push_back(slider);
+    m_mainLayer->addChild(slider);
+
+    auto valLabel = CCLabelBMFont::create(
+        fmt::format("{:.1f}", value).c_str(), "chatFont.fnt");
+    valLabel->setScale(0.4f);
+    valLabel->setPosition(550, y - 10);
+    m_contentNodes.push_back(valLabel);
+    m_mainLayer->addChild(valLabel);
+}
+
+void SettingsUI::addDropdown(const char* label, const char* settingKey,
+                              const std::vector<std::string>& options, float y) {
+    auto mod = Mod::get();
+    std::string current = mod->getSettingValue<std::string>(settingKey);
+
+    auto lbl = CCLabelBMFont::create(label, "chatFont.fnt");
+    lbl->setScale(0.5f);
+    lbl->setPosition(130, y);
+    lbl->setAnchorPoint({0.0f, 0.5f});
+    m_contentNodes.push_back(lbl);
+    m_mainLayer->addChild(lbl);
+
+    // Mostrar la opción actual
+    auto currentLabel = CCLabelBMFont::create(current.c_str(), "chatFont.fnt");
+    currentLabel->setScale(0.45f);
+    currentLabel->setPosition(450, y);
+    currentLabel->setColor({200, 200, 255});
+    m_contentNodes.push_back(currentLabel);
+    m_mainLayer->addChild(currentLabel);
+
+    // Flechas para cambiar (simplificado)
+    auto leftArrow = CCMenuItemSpriteExtra::create(
+        CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png"),
+        this, nullptr);
+    leftArrow->setPosition(360, y);
+    leftArrow->setScale(0.5f);
+
+    auto rightArrow = CCMenuItemSpriteExtra::create(
+        CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png"),
+        this, nullptr);
+    rightArrow->setPosition(540, y);
+    rightArrow->setScale(0.5f);
+    rightArrow->setRotation(180);
+
+    auto menu = CCMenu::create();
+    menu->addChild(leftArrow);
+    menu->addChild(rightArrow);
+    menu->setPosition(0, 0);
+    m_contentNodes.push_back(menu);
+    m_mainLayer->addChild(menu);
+}
+
+void SettingsUI::addTextInput(const char* label, const char* settingKey, float y) {
+    auto mod = Mod::get();
+    std::string value = mod->getSettingValue<std::string>(settingKey);
+
+    auto lbl = CCLabelBMFont::create(label, "chatFont.fnt");
+    lbl->setScale(0.5f);
+    lbl->setPosition(130, y);
+    lbl->setAnchorPoint({0.0f, 0.5f});
+    m_contentNodes.push_back(lbl);
+    m_mainLayer->addChild(lbl);
+
+    auto input = TextInput::create(300, "value", "chatFont.fnt");
+    input->setString(value);
+    input->setPosition(360, y);
+    m_contentNodes.push_back(input);
+    m_mainLayer->addChild(input);
+}
+
+// ============================================================
+//  PESTAÑA: COUNTER
+// ============================================================
+
+void SettingsUI::createCounterTab() {
+    float y = 400;
+
+    addTitle("ROWS IN THE TOP CORNER", y);
+    y -= 30;
+    addDropdown("Rows Mode", "rows-mode",
+                {"Short", "Normal", "Personalize"}, y);
+    y -= 30;
+    addDescription("Short: 1,2,3,4,5+ | Normal: 13-15,9-12,7-8,5-6,4,3,2,1", y);
+    y -= 40;
+
+    addToggle("Copy Counts", "copy-counts", y);
+    y -= 35;
+    addToggle("Count Straight Fly", "count-straight-fly", y);
+    y -= 35;
+    addToggle("Count Wave Spam", "count-wave-spam", y);
+    y -= 35;
+
+    addTitle("CUSTOM ROWS (Personalize)", y);
+    y -= 30;
+    addTextInput("Rows", "rows-custom", y);
+}
+
+// ============================================================
+//  PESTAÑA: CIRCLES
+// ============================================================
+
+void SettingsUI::createCirclesTab() {
+    float y = 400;
+
+    addTitle("CIRCLE APPEARANCE", y);
+    y -= 40;
+    addSlider("Circle Size (%)", "circle-size", 20.0f, 300.0f, y);
+    y -= 60;
+    addSlider("Number Size (%)", "number-size", 20.0f, 300.0f, y);
+    y -= 60;
+    addToggle("Milliseconds Under Number", "ms-under-number", y);
+    y -= 40;
+    addToggle("Number Beside Ring", "number-beside-ring", y);
+}
+
+// ============================================================
+//  PESTAÑA: SOUNDS
+// ============================================================
+
+void SettingsUI::createSoundsTab() {
+    float y = 400;
+
+    addTitle("SOUND CONFIGURATION", y);
+    y -= 40;
+    addToggle("Vary Pitch", "vary-pitch", y);
+    y -= 40;
+    addDropdown("Sound Timing", "sound-timing",
+                {"On Click", "Before Click", "After Click", "Perfect Frame"}, y);
+    y -= 40;
+    addDescription("El pitch del BING! varía según la precisión del click", y);
+}
+
+// ============================================================
+//  PESTAÑA: SCAN
+// ============================================================
+
+void SettingsUI::createScanTab() {
+    float y = 400;
+
+    addTitle("SCAN CONFIGURATION", y);
+    y -= 40;
+    addDropdown("Frames Each Side", "scan-distance",
+                {"Auto", "5", "10", "15", "20", "25", "30", "50"}, y);
+    y -= 40;
+    addSlider("From (%)", "scan-from", 0.0f, 100.0f, y);
+    y -= 60;
+    addSlider("To (%)", "scan-to", 0.0f, 100.0f, y);
+    y -= 60;
+    addDropdown("Scan Speed", "scan-speed", {"FULL", "FAST", "FASTEST"}, y);
+    y -= 40;
+    addToggle("Local Check", "local-check", y);
+    y -= 40;
+    addDescription("A click passes when alive after the next click", y);
+}
+
+// ============================================================
+//  PESTAÑA: RECORDING
+// ============================================================
+
+void SettingsUI::createRecordingTab() {
+    float y = 400;
+
+    addTitle("RECORDING & PLAYBACK", y);
+    y -= 40;
+    addSlider("Recording Speed (%)", "recording-speed", 20.0f, 500.0f, y);
+    y -= 60;
+    addSlider("Playback Speed (%)", "playback-speed", 20.0f, 500.0f, y);
+    y -= 60;
+    addToggle("Click During Playback", "click-during-playback", y);
+    y -= 40;
+    addDescription("Desactivado por defecto", y);
+}
+
+// ============================================================
+//  PESTAÑA: TOOLS
+// ============================================================
+
+void SettingsUI::createToolsTab() {
+    float y = 400;
+
+    addTitle("TOOLS", y);
+    y -= 40;
+    addToggle("Hitboxes", "show-hitboxes", y);
+    y -= 35;
+    addToggle("Hitboxes on Death", "hitboxes-on-death", y);
+    y -= 35;
+    addToggle("Hitbox Trail", "hitbox-trail", y);
+    y -= 35;
+    addToggle("Trajectory", "show-trajectory", y);
+    y -= 35;
+    addToggle("Frame Stepper", "frame-stepper", y);
+    y -= 35;
+    addToggle("Input Display", "input-display", y);
+    y -= 35;
+    addDropdown("Render Preset", "render-preset",
+                {"720p30", "720p60", "1080p30", "1080p60",
+                 "1440p60", "4K30", "4K60", "Custom"}, y);
+}

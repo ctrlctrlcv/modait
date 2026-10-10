@@ -1,0 +1,9 @@
+{
+  "geode": "5.0.0",
+  "id": "olk.olkfpc",
+  "name": "OlkFPC",
+  "version": "1.0.0",
+  "developer": "Olk",
+  "description": "Frame Perfect Counter con analizador de macros.",
+  "repository": "https://github.com/olkomos/modait"
+}
