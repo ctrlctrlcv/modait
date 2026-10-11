@@ -1,10 +1,11 @@
 #include "FPSSettingsUI.hpp"
 #include <Geode/utils/string.hpp>
 #include <cmath>
+#include <algorithm>
 
 FPSSettingsUI* FPSSettingsUI::create() {
     auto ret = new FPSSettingsUI();
-    if (ret && ret->init(500.0f, 400.0f)) {   // Popup::init ancho, alto
+    if (ret && ret->init(500.0f, 400.0f)) {
         ret->autorelease();
         return ret;
     }
@@ -46,9 +47,9 @@ bool FPSSettingsUI::setup() {
     m_macroFPSLabel->setColor({100, 255, 200});
     m_mainLayer->addChild(m_macroFPSLabel);
 
-    // ✅ SliderNode con callback
-    m_macroSlider = SliderNode::create([this](float value) {
-        int fps = static_cast<int>(std::pow(10, value * std::log10(30000.0f)));
+    // ✅ Callback con DOS parámetros (SliderNode*, float)
+    m_macroSlider = SliderNode::create([this](SliderNode* node, float value) {
+        int fps = static_cast<int>(std::pow(10.0f, value * std::log10(30000.0f)));
         fps = std::clamp(fps, 1, 30000);
         m_macroFPSLabel->setString(std::to_string(fps).c_str());
         Mod::get()->setSettingValue<int64_t>("macro-fps", fps);
@@ -56,7 +57,7 @@ bool FPSSettingsUI::setup() {
     m_macroSlider->setPosition(250, 230);
     m_macroSlider->setMin(0.0f);
     m_macroSlider->setMax(1.0f);
-    m_macroSlider->setValue(std::log10(macroFps) / std::log10(30000.0f));
+    m_macroSlider->setValue(std::log10(static_cast<float>(macroFps)) / std::log10(30000.0f));
     m_mainLayer->addChild(m_macroSlider);
 
     // Presets
@@ -90,8 +91,8 @@ bool FPSSettingsUI::setup() {
     m_scanFPSLabel->setColor({255, 200, 100});
     m_mainLayer->addChild(m_scanFPSLabel);
 
-    m_scanSlider = SliderNode::create([this](float value) {
-        int fps = static_cast<int>(std::pow(10, value * std::log10(30000.0f)));
+    m_scanSlider = SliderNode::create([this](SliderNode* node, float value) {
+        int fps = static_cast<int>(std::pow(10.0f, value * std::log10(30000.0f)));
         fps = std::clamp(fps, 1, 30000);
         m_scanFPSLabel->setString(std::to_string(fps).c_str());
         Mod::get()->setSettingValue<int64_t>("scan-fps", fps);
@@ -99,7 +100,7 @@ bool FPSSettingsUI::setup() {
     m_scanSlider->setPosition(250, 100);
     m_scanSlider->setMin(0.0f);
     m_scanSlider->setMax(1.0f);
-    m_scanSlider->setValue(std::log10(scanFps) / std::log10(30000.0f));
+    m_scanSlider->setValue(std::log10(static_cast<float>(scanFps)) / std::log10(30000.0f));
     m_mainLayer->addChild(m_scanSlider);
 
     auto warning = CCLabelBMFont::create(
@@ -133,6 +134,6 @@ void FPSSettingsUI::onPresetClicked(CCObject* sender) {
     Mod::get()->setSettingValue<int64_t>("macro-fps", fps);
     Mod::get()->setSettingValue<int64_t>("scan-fps", fps);
 
-    m_macroSlider->setValue(std::log10(fps) / std::log10(30000.0f));
-    m_scanSlider->setValue(std::log10(fps) / std::log10(30000.0f));
+    m_macroSlider->setValue(std::log10(static_cast<float>(fps)) / std::log10(30000.0f));
+    m_scanSlider->setValue(std::log10(static_cast<float>(fps)) / std::log10(30000.0f));
 }
