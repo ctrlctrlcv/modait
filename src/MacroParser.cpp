@@ -64,8 +64,6 @@ Result<std::vector<ClickData>> MacroParser::parse(
 Result<std::vector<ClickData>> MacroParser::parseCML(const std::string& content) {
     std::vector<ClickData> clicks;
 
-    // Regex corregido: se usa un delimitador personalizado "rx" para evitar
-    // que el terminador )" aparezca dentro del patrón.
     std::regex clickRegex(R"(<click\s+([^>]+)/>)");
     std::regex attrRegex(R"rx((\w+)="([^"]*)")rx");
 
@@ -191,7 +189,6 @@ Result<std::vector<ClickData>> MacroParser::parseGDR2(const std::string& content
 
     auto json = parseResult.unwrap();
 
-    // API de matjson en Geode 5.x: se usan métodos camelCase
     if (!json.isObject()) {
         return parseGDR(content);
     }
@@ -202,12 +199,12 @@ Result<std::vector<ClickData>> MacroParser::parseGDR2(const std::string& content
 
     for (auto& c : json["clicks"]) {
         ClickData click;
-        click.frame = c["frame"].asInt();
+        click.frame = static_cast<int>(c["frame"].asInt().unwrapOr(0));
         click.time = c.contains("time")
-            ? static_cast<float>(c["time"].asDouble())
+            ? static_cast<float>(c["time"].asDouble().unwrapOr(click.frame / 240.0))
             : (click.frame / 240.0f);
-        click.isHold = c.contains("hold") && c["hold"].asBool();
-        click.player2 = c.contains("player") && c["player"].asInt() == 2;
+        click.isHold = c.contains("hold") && c["hold"].asBool().unwrapOr(false);
+        click.player2 = c.contains("player") && c["player"].asInt().unwrapOr(1) == 2;
         clicks.push_back(click);
     }
 
@@ -235,14 +232,14 @@ Result<std::vector<ClickData>> MacroParser::parseJSON(const std::string& content
         for (auto& item : arr) {
             ClickData click;
             if (item.isObject()) {
-                click.frame = item.contains("frame") ? item["frame"].asInt() : 0;
+                click.frame = static_cast<int>(item["frame"].asInt().unwrapOr(0));
                 click.time = item.contains("time")
-                    ? static_cast<float>(item["time"].asDouble())
+                    ? static_cast<float>(item["time"].asDouble().unwrapOr(click.frame / 240.0))
                     : (click.frame / 240.0f);
-                click.isHold = item.contains("hold") && item["hold"].asBool();
-                click.player2 = item.contains("player") && item["player"].asInt() == 2;
+                click.isHold = item.contains("hold") && item["hold"].asBool().unwrapOr(false);
+                click.player2 = item.contains("player") && item["player"].asInt().unwrapOr(1) == 2;
             } else if (item.isNumber()) {
-                click.frame = item.asInt();
+                click.frame = static_cast<int>(item.asInt().unwrapOr(0));
                 click.time = click.frame / 240.0f;
             }
             clicks.push_back(click);
