@@ -1,17 +1,15 @@
 #pragma once
 #include "../Types.hpp"
+#include <Geode/ui/Popup.hpp>
 
 namespace fbfc {
 
-class SettingsUI;
-
-// Popup principal: pestañas Counter / Insights / Settings.
-class MainMenuUI : public geode::Popup<> {
+class MainMenuUI : public geode::Popup {
 public:
     static MainMenuUI* create();
     static void open();
 protected:
-    bool setup() override;
+    bool init();
     void update(float dt) override;
 private:
     enum class Tab { Counter, Insights, Settings };
@@ -27,7 +25,6 @@ private:
     cocos2d::CCNode* m_content = nullptr;
     cocos2d::CCLabelBMFont* m_status = nullptr;
     uint64_t m_rev = UINT64_MAX;
-    geode::EventListener<geode::Task<geode::Result<std::filesystem::path>>> m_pick;
 };
 
 }  // namespace fbfc
