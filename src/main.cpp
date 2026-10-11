@@ -6,22 +6,14 @@
 #include "OlkFPC.hpp"
 #include "ui/MainMenuUI.hpp"
 #include "ui/CirclesOverlay.hpp"
-#include "PlaybackController.hpp"          // ← CORREGIDO (sin "playback/")
+#include "PlaybackController.hpp"
 
 using namespace geode::prelude;
-
-// ============================================================
-//  INICIALIZACIÓN DEL MOD
-// ============================================================
 
 $on_mod(Loaded) {
     log::info("OlkFPC: Mod cargado correctamente");
     OlkFPC::get()->onModLoaded();
 }
-
-// ============================================================
-//  PAUSE LAYER — Botón de acceso directo
-// ============================================================
 
 class $modify(OlkFPCPauseLayer, PauseLayer) {
     void customSetup() {
@@ -47,10 +39,6 @@ class $modify(OlkFPCPauseLayer, PauseLayer) {
     }
 };
 
-// ============================================================
-//  PLAY LAYER — Overlays
-// ============================================================
-
 class $modify(OlkFPCPlayLayer, PlayLayer) {
     struct Fields {
         CirclesOverlay* circlesOverlay = nullptr;
@@ -75,10 +63,6 @@ class $modify(OlkFPCPlayLayer, PlayLayer) {
         PlayLayer::onQuit();
     }
 };
-
-// ============================================================
-//  PLAYER OBJECT — Captura de inputs
-// ============================================================
 
 class $modify(OlkFPCPlayerObject, PlayerObject) {
     void pushButton(PlayerButton button) {
