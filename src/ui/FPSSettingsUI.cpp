@@ -7,12 +7,13 @@ namespace fbfc {
 
 FPSSettingsUI* FPSSettingsUI::create() {
     auto* r = new FPSSettingsUI();
-    if (r->initAnchored(300.f, 220.f)) { r->autorelease(); return r; }
+    if (r->init()) { r->autorelease(); return r; }
     delete r; return nullptr;
 }
 void FPSSettingsUI::open() { if (auto* p = create()) p->show(); }
 
-bool FPSSettingsUI::setup() {
+bool FPSSettingsUI::init() {
+    if (!Popup::init(300.f, 220.f)) return false;
     this->setTitle("FPS Settings");
     auto sz = m_mainLayer->getContentSize();
     rebuild();
