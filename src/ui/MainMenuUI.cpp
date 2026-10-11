@@ -4,6 +4,7 @@
 #include "../OlkFPC.hpp"
 #include <Geode/utils/file.hpp>
 #include <algorithm>
+#include <Geode/utils/async.hpp>
 
 using namespace geode::prelude;
 
