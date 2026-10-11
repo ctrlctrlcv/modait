@@ -31,15 +31,13 @@ bool MainMenuUI::init() {
         m_buttonMenu->addChild(b);
     }
     // Acciones: analizar / importar / exportar
-    static constexpr struct { char const* t; SEL_MenuHandler h; } acts[] = {
+    std::pair<char const*, SEL_MenuHandler> const acts[] = {
         {"Analyze", menu_selector(MainMenuUI::onAnalyze)},
         {"Import", menu_selector(MainMenuUI::onImport)},
         {"Export", menu_selector(MainMenuUI::onExport)}};
     for (int i = 0; i < 3; ++i) {
-        auto* spr = ButtonSprite::create(acts[i].t, 70, true, "goldFont.fnt", "GJ_button_01.png", 24.f, 0.6f);
-        auto* b = CCMenuItemSpriteExtra::create(spr, this, acts[i].h);
-        b->setPosition({sz.width / 2.f - 80.f + i * 80.f, 22.f});
-        m_buttonMenu->addChild(b);
+        auto* spr = ButtonSprite::create(acts[i].first, 70, true, "goldFont.fnt", "GJ_button_01.png", 24.f, 0.6f);
+        auto* b = CCMenuItemSpriteExtra::create(spr, this, acts[i].second);
     }
     m_status = CCLabelBMFont::create("", "bigFont.fnt");
     m_status->setScale(0.3f);
