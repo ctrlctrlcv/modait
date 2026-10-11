@@ -12,13 +12,15 @@ namespace fbfc {
 
 MainMenuUI* MainMenuUI::create() {
     auto* r = new MainMenuUI();
-    if (r->initAnchored(460.f, 300.f)) { r->autorelease(); return r; }
+    if (r->init()) { r->autorelease(); return r; }
     delete r; return nullptr;
 }
 void MainMenuUI::open() { if (auto* p = create()) p->show(); }
 
-bool MainMenuUI::setup() {
+bool MainMenuUI::init() {
+    if (!Popup::init(460.f, 300.f)) return false;
     this->setTitle("FBFrameCounter");
+    // ... el resto de la función queda igual
     auto sz = m_mainLayer->getContentSize();
     static constexpr char const* names[] = {"Counter", "Insights", "Settings"};
     for (int i = 0; i < 3; ++i) {
