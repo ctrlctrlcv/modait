@@ -3,10 +3,21 @@
 #include <cmath>
 #include <algorithm>
 
+// ============================================================
+//  CREACIÓN
+// ============================================================
+
 FPSSettingsUI* FPSSettingsUI::create() {
     auto ret = new FPSSettingsUI();
     if (ret && ret->init(500.0f, 400.0f)) {
         ret->autorelease();
+
+        // ✅ Escalar para que quepa en pantalla
+        auto winSize = CCDirector::get()->getWinSize();
+        float scaleX = (winSize.width * 0.9f) / 500.0f;
+        float scaleY = (winSize.height * 0.9f) / 400.0f;
+        ret->setScale(std::min(scaleX, scaleY));
+
         return ret;
     }
     CC_SAFE_DELETE(ret);
@@ -18,6 +29,10 @@ bool FPSSettingsUI::init(float width, float height) {
     buildUI();
     return true;
 }
+
+// ============================================================
+//  BUILD UI
+// ============================================================
 
 void FPSSettingsUI::buildUI() {
     auto bg = CCLayerColor::create({18, 18, 24, 255});
