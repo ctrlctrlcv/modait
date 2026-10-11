@@ -1,0 +1,50 @@
+{
+  "geode": "5.0.0",
+  "gd": { "win": "2.2081", "android": "2.2081", "mac": "2.2081", "ios": "2.2081" },
+  "id": "fbfc.framecounter",
+  "name": "FBFrameCounter",
+  "version": "v1.0.0",
+  "developer": "FBFrameCounter Contributors",
+  "description": "Open-source frame-window analyzer for Geometry Dash runs.",
+  "repository": "https://github.com/your-user/FBFrameCounter",
+  "tags": ["utility", "interface"],
+  "settings": {
+    "macro-fps": { "type": "int", "name": "Macro FPS", "description": "FPS used to record/play macros (1-30000). Use the FPS popup for a log slider.", "default": 240, "min": 1, "max": 30000 },
+    "scan-fps": { "type": "int", "name": "Scan FPS", "description": "Physics FPS used by the analyzer (1-30000).", "default": 240, "min": 1, "max": 30000 },
+    "scan-max-shift": { "type": "int", "name": "Max shift (frames)", "description": "Maximum offset tested each direction per click.", "default": 12, "min": 1, "max": 64 },
+    "scan-horizon": { "type": "int", "name": "Horizon (frames)", "description": "Frames simulated after each click to decide pass/fail.", "default": 240, "min": 10, "max": 2400 },
+    "scan-budget-ms": { "type": "int", "name": "Scan budget (ms/frame)", "description": "Main-thread time slice per rendered frame.", "default": 8, "min": 1, "max": 50 },
+    "scan-auto": { "type": "bool", "name": "Auto-scan on completion", "description": "Analyze automatically after completing a level.", "default": false },
+
+    "counter-enabled": { "type": "bool", "name": "Counter enabled", "description": "Enable the counter overlays.", "default": true },
+    "rows-enabled": { "type": "bool", "name": "Rows overlay", "description": "Show the rows overlay.", "default": true },
+    "rows-mode": { "type": "string", "name": "Rows mode", "description": "Short / Normal / Custom.", "default": "Normal", "one-of": ["Short", "Normal", "Custom"] },
+    "rows-custom": { "type": "string", "name": "Rows custom", "description": "Window ranges to show, e.g. 0-3,5,9+", "default": "0-9+" },
+    "rows-size": { "type": "float", "name": "Rows size", "description": "Scale of rows.", "default": 0.5, "min": 0.2, "max": 1.5 },
+
+    "circles-enabled": { "type": "bool", "name": "Circles overlay", "description": "Draw precision rings in the level.", "default": true },
+    "circles-size": { "type": "float", "name": "Circle size", "description": "Ring radius multiplier.", "default": 1.0, "min": 0.3, "max": 3.0 },
+    "circles-thickness": { "type": "float", "name": "Ring thickness", "description": "Ring border width.", "default": 2.0, "min": 0.5, "max": 8.0 },
+    "circles-label-size": { "type": "float", "name": "Label size", "description": "Label scale.", "default": 0.35, "min": 0.1, "max": 1.0 },
+    "circles-max-window": { "type": "int", "name": "Max window shown", "description": "Hide circles with a larger window.", "default": 12, "min": 0, "max": 64 },
+    "circles-show-ms": { "type": "bool", "name": "Show milliseconds", "description": "Label in ms instead of frames.", "default": false },
+
+    "sound-enabled": { "type": "bool", "name": "Sounds", "description": "Play a sound per analyzed click.", "default": false },
+    "sound-volume": { "type": "float", "name": "Volume", "description": "Sound volume.", "default": 0.7, "min": 0.0, "max": 2.0 },
+    "sound-timing": { "type": "string", "name": "Timing", "description": "When to play the sound.", "default": "On Click", "one-of": ["On Click", "Before Click", "After Click", "Perfect Frame"] },
+    "sound-pitch": { "type": "bool", "name": "Variable pitch", "description": "Pitch mapped to precision (0=1.5, 5+=0.8).", "default": true },
+    "sound-local": { "type": "bool", "name": "Use bing.mp3", "description": "Use resources/bing.mp3 if present.", "default": true },
+
+    "record-auto": { "type": "bool", "name": "Auto record inputs", "description": "Keep a macro of every attempt.", "default": true },
+    "render-preset": { "type": "string", "name": "Render preset", "description": "Video preset.", "default": "1080p60", "one-of": ["720p30", "720p60", "1080p30", "1080p60", "1440p60", "4K30", "4K60"] },
+    "render-crf": { "type": "int", "name": "CRF", "description": "x264 quality (lower is better).", "default": 18, "min": 0, "max": 51 },
+    "ffmpeg-path": { "type": "string", "name": "FFmpeg path", "description": "Path to the ffmpeg executable.", "default": "ffmpeg" },
+
+    "tools-hitboxes": { "type": "bool", "name": "Hitboxes", "description": "Draw player hitboxes.", "default": false },
+    "tools-trail": { "type": "bool", "name": "Hitbox trail", "description": "Draw hitbox trail.", "default": false },
+    "tools-trail-length": { "type": "int", "name": "Trail length", "description": "Frames kept in trail.", "default": 120, "min": 10, "max": 2000 },
+    "tools-trajectory": { "type": "bool", "name": "Predicted trajectory (experimental)", "description": "Simulates ahead using a checkpoint.", "default": false },
+    "tools-input-display": { "type": "bool", "name": "Input display", "description": "Show P1/P2 input panel.", "default": false },
+    "tools-stepper": { "type": "bool", "name": "Frame stepper button", "description": "Show a step button in the pause menu.", "default": true }
+  }
+}
