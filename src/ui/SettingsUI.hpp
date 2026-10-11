@@ -4,10 +4,10 @@
 
 using namespace geode::prelude;
 
-class SettingsUI : public geode::Popup {   // ← Sin <>
+class SettingsUI : public geode::Popup {
 public:
     static SettingsUI* create();
-    bool setup() override;
+    bool setup();                    // ← sin override
 
 private:
     int m_currentTab = 0;
