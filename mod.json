@@ -1,6 +1,11 @@
 {
   "geode": "5.0.0",
-  "gd": "2.2081",
+  "gd": {
+    "win": "2.2081",
+    "android": "2.2081",
+    "mac": "2.2081",
+    "ios": "2.2081"
+  },
   "id": "olk.olkfpc",
   "name": "OlkFPC",
   "version": "1.0.0",
