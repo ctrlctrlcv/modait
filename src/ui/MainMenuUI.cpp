@@ -12,17 +12,17 @@ MainMenuUI* MainMenuUI::create() {
     auto ret = new MainMenuUI();
     if (ret && ret->init(720.0f, 520.0f)) {
         ret->autorelease();
+        
+        // ✅ Escalar para que quepa en pantalla
+        auto winSize = CCDirector::get()->getWinSize();
+        float scaleX = (winSize.width * 0.9f) / 720.0f;
+        float scaleY = (winSize.height * 0.9f) / 520.0f;
+        ret->setScale(std::min(scaleX, scaleY));
+        
         return ret;
     }
     CC_SAFE_DELETE(ret);
     return nullptr;
-}
-
-// ✅ Sobreescribir init() en vez de setup()
-bool MainMenuUI::init(float width, float height) {
-    if (!Popup::init(width, height)) return false;
-    buildUI();
-    return true;
 }
 
 // ============================================================
