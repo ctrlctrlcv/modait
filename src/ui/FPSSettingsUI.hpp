@@ -3,7 +3,7 @@
 
 using namespace geode::prelude;
 
-class FPSSettingsUI : public geode::Popup<> {
+class FPSSettingsUI : public geode::Popup {   // ← Sin <>
 public:
     static FPSSettingsUI* create();
     bool setup() override;
@@ -15,7 +15,6 @@ private:
 
     CCLabelBMFont* m_macroFPSLabel = nullptr;
     CCLabelBMFont* m_scanFPSLabel = nullptr;
-    CCLabelBMFont* m_presetLabel = nullptr;
-    Slider* m_macroSlider = nullptr;
-    Slider* m_scanSlider = nullptr;
+    SliderNode* m_macroSlider = nullptr;   // ← SliderNode en vez de Slider
+    SliderNode* m_scanSlider = nullptr;
 };
