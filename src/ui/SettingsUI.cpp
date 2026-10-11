@@ -2,6 +2,10 @@
 #include <Geode/utils/string.hpp>
 #include <algorithm>
 
+// ============================================================
+//  CREACIÓN
+// ============================================================
+
 SettingsUI* SettingsUI::create() {
     auto ret = new SettingsUI();
     if (ret && ret->init(640.0f, 480.0f)) {
@@ -12,7 +16,17 @@ SettingsUI* SettingsUI::create() {
     return nullptr;
 }
 
-bool SettingsUI::setup() {
+bool SettingsUI::init(float width, float height) {
+    if (!Popup::init(width, height)) return false;
+    buildUI();
+    return true;
+}
+
+// ============================================================
+//  BUILD UI
+// ============================================================
+
+void SettingsUI::buildUI() {
     auto bg = CCLayerColor::create({16, 16, 22, 255});
     bg->setContentSize(m_mainLayer->getContentSize());
     m_mainLayer->addChild(bg);
@@ -46,9 +60,11 @@ bool SettingsUI::setup() {
     m_mainLayer->addChild(m_contentBg);
 
     createCounterTab();
-
-    return true;
 }
+
+// ============================================================
+//  CONTROL DE PESTAÑAS
+// ============================================================
 
 void SettingsUI::onTabClicked(CCObject* sender) {
     auto btn = dynamic_cast<CCMenuItemSpriteExtra*>(sender);
@@ -66,7 +82,7 @@ void SettingsUI::onTabClicked(CCObject* sender) {
         case 5: createToolsTab(); break;
     }
 
-    // Actualizar colores de las pestañas con getChildrenExt()
+    // Colores de las pestañas
     for (CCNode* child : m_mainLayer->getChildrenExt()) {
         auto menu = dynamic_cast<CCMenu*>(child);
         if (!menu) continue;
