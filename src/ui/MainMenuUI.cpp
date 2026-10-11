@@ -4,6 +4,10 @@
 #include "MacroParser.hpp"
 #include <Geode/utils/file.hpp>
 
+// ============================================================
+//  CREACIÓN
+// ============================================================
+
 MainMenuUI* MainMenuUI::create() {
     auto ret = new MainMenuUI();
     if (ret && ret->init(720.0f, 520.0f)) {
@@ -14,7 +18,18 @@ MainMenuUI* MainMenuUI::create() {
     return nullptr;
 }
 
-bool MainMenuUI::setup() {
+// ✅ Sobreescribir init() en vez de setup()
+bool MainMenuUI::init(float width, float height) {
+    if (!Popup::init(width, height)) return false;
+    buildUI();
+    return true;
+}
+
+// ============================================================
+//  CONSTRUCCIÓN DE LA UI
+// ============================================================
+
+void MainMenuUI::buildUI() {
     auto bg = CCLayerColor::create({18, 18, 24, 255});
     bg->setContentSize(m_mainLayer->getContentSize());
     m_mainLayer->addChild(bg);
@@ -40,6 +55,7 @@ bool MainMenuUI::setup() {
     sub->setColor({120, 120, 150});
     m_mainLayer->addChild(sub);
 
+    // Pestañas
     const char* tabNames[] = {"Counter", "Insights", "Settings"};
     for (int i = 0; i < 3; ++i) {
         auto tabLabel = CCLabelBMFont::create(tabNames[i], "bigFont.fnt");
@@ -57,6 +73,7 @@ bool MainMenuUI::setup() {
         m_mainLayer->addChild(menu);
     }
 
+    // Botones inferiores
     auto importBtn = CCMenuItemSpriteExtra::create(
         CCLabelBMFont::create("Import", "bigFont.fnt"),
         this, menu_selector(MainMenuUI::onImport));
@@ -96,8 +113,11 @@ bool MainMenuUI::setup() {
     m_mainLayer->addChild(m_contentBg);
 
     showCounterTab();
-    return true;
 }
+
+// ============================================================
+//  CONTROL DE PESTAÑAS
+// ============================================================
 
 void MainMenuUI::onTabClicked(CCObject* sender) {
     auto btn = dynamic_cast<CCMenuItemSpriteExtra*>(sender);
@@ -128,6 +148,10 @@ void MainMenuUI::rebuildContent() {
         case 2: showSettingsTab(); break;
     }
 }
+
+// ============================================================
+//  TAB: COUNTER
+// ============================================================
 
 void MainMenuUI::showCounterTab() {
     m_currentTab = 0;
@@ -225,6 +249,10 @@ void MainMenuUI::refreshGraph() {
     m_mainLayer->addChild(summaryLbl);
 }
 
+// ============================================================
+//  TAB: INSIGHTS
+// ============================================================
+
 void MainMenuUI::showInsightsTab() {
     m_currentTab = 1;
     clearContent();
@@ -310,6 +338,10 @@ void MainMenuUI::showInsightsTab() {
     }
 }
 
+// ============================================================
+//  TAB: SETTINGS
+// ============================================================
+
 void MainMenuUI::showSettingsTab() {
     m_currentTab = 2;
     clearContent();
@@ -348,11 +380,10 @@ void MainMenuUI::showSettingsTab() {
 }
 
 // ============================================================
-//  IMPORT / EXPORT (versión simplificada)
+//  IMPORT / EXPORT
 // ============================================================
 
 void MainMenuUI::onImport(CCObject*) {
-    // Busca macros en la carpeta de guardado del mod
     auto dir = Mod::get()->getSaveDir();
     std::vector<std::filesystem::path> found;
 
@@ -373,7 +404,6 @@ void MainMenuUI::onImport(CCObject*) {
         return;
     }
 
-    // Cargar el primer macro encontrado
     if (OlkFPC::get()->loadMacro(found[0])) {
         rebuildContent();
     }
