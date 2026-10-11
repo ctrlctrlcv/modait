@@ -1,10 +1,10 @@
 #pragma once
 #include <Geode/Geode.hpp>
-#include "../OlkFPC.hpp"
+#include "OlkFPC.hpp"
 
 using namespace geode::prelude;
 
-class SettingsUI : public geode::Popup<> {
+class SettingsUI : public geode::Popup {   // ← Sin <>
 public:
     static SettingsUI* create();
     bool setup() override;
@@ -12,7 +12,6 @@ public:
 private:
     int m_currentTab = 0;
 
-    // Pestañas
     void createCounterTab();
     void createCirclesTab();
     void createSoundsTab();
@@ -20,7 +19,6 @@ private:
     void createRecordingTab();
     void createToolsTab();
 
-    // Helpers de UI
     void addTitle(const char* text, float y);
     void addToggle(const char* label, const char* settingKey, float y);
     void addSlider(const char* label, const char* settingKey,
@@ -30,10 +28,7 @@ private:
     void addTextInput(const char* label, const char* settingKey, float y);
     void addDescription(const char* text, float y);
 
-    // Cambiar pestaña
     void onTabClicked(CCObject* sender);
-
-    // Limpiar contenido
     void clearContent();
 
     CCLayerColor* m_contentBg = nullptr;
