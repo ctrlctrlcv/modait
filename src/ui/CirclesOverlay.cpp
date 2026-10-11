@@ -1,10 +1,13 @@
-// CirclesOverlay.cpp
 #include "CirclesOverlay.hpp"
 
 CirclesOverlay* CirclesOverlay::create() {
     auto ret = new CirclesOverlay();
-    if (ret && ret->init()) { ret->autorelease(); return ret; }
-    CC_SAFE_DELETE(ret); return nullptr;
+    if (ret && ret->init()) {
+        ret->autorelease();
+        return ret;
+    }
+    CC_SAFE_DELETE(ret);
+    return nullptr;
 }
 
 bool CirclesOverlay::init() {
@@ -16,10 +19,12 @@ bool CirclesOverlay::init() {
 void CirclesOverlay::update(float dt) {
     for (auto node : m_circleNodes) node->removeFromParent();
     for (auto label : m_numberLabels) label->removeFromParent();
-    m_circleNodes.clear(); m_numberLabels.clear();
+    m_circleNodes.clear();
+    m_numberLabels.clear();
 
     auto& olk = *OlkFPC::get();
     if (!olk.m_isPlaying || olk.m_clicks.empty()) return;
+
     auto playLayer = PlayLayer::get();
     if (!playLayer) return;
 
@@ -37,6 +42,7 @@ void CirclesOverlay::update(float dt) {
 
     for (int i = windowStart; i <= windowEnd; ++i) {
         auto& click = olk.m_clicks[i];
+
         cocos2d::ccColor4B color;
         if (click.frameWindow == 0)      color = {255, 100, 100, 255};
         else if (click.frameWindow == 1) color = {255, 165, 0, 255};
@@ -67,22 +73,32 @@ void CirclesOverlay::update(float dt) {
     }
 }
 
-void CirclesOverlay::drawRing(const cocos2d::CCPoint& pos, float radius, const cocos2d::ccColor4B& color, float thickness) {
+void CirclesOverlay::drawRing(const cocos2d::CCPoint& pos, float radius,
+                               const cocos2d::ccColor4B& color, float thickness) {
     auto drawNode = CCDrawNode::create();
+
+    // ✅ CONVERSIÓN CORREGIDA: ccColor4B → ccColor4F
+    cocos2d::ccColor4F colorF = ccc4FFromccc4B(color);
+
     const int segments = 32;
     float angleStep = 2.0f * M_PI / segments;
+
     for (int i = 0; i < segments; ++i) {
         float a1 = i * angleStep;
         float a2 = (i + 1) * angleStep;
+
         CCPoint p1 = {pos.x + radius * cosf(a1), pos.y + radius * sinf(a1)};
         CCPoint p2 = {pos.x + radius * cosf(a2), pos.y + radius * sinf(a2)};
-        drawNode->drawSegment(p1, p2, thickness, color);
+
+        drawNode->drawSegment(p1, p2, thickness, colorF);   // ← usa colorF
     }
+
     m_circleNodes.push_back(drawNode);
     this->addChild(drawNode);
 }
 
-void CirclesOverlay::drawNumber(const cocos2d::CCPoint& pos, int number, const cocos2d::ccColor4B& color) {
+void CirclesOverlay::drawNumber(const cocos2d::CCPoint& pos, int number,
+                                 const cocos2d::ccColor4B& color) {
     auto label = CCLabelBMFont::create(std::to_string(number).c_str(), "bigFont.fnt");
     label->setScale(0.4f);
     label->setPosition(pos);
@@ -92,7 +108,8 @@ void CirclesOverlay::drawNumber(const cocos2d::CCPoint& pos, int number, const c
 }
 
 void CirclesOverlay::drawMilliseconds(const cocos2d::CCPoint& pos, float ms) {
-    auto msLabel = CCLabelBMFont::create(fmt::format("{:.1f}ms", ms).c_str(), "chatFont.fnt");
+    auto msLabel = CCLabelBMFont::create(
+        fmt::format("{:.1f}ms", ms).c_str(), "chatFont.fnt");
     msLabel->setScale(0.35f);
     msLabel->setPosition(pos);
     msLabel->setColor({150, 150, 180});
