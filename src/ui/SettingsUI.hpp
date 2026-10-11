@@ -7,10 +7,12 @@ using namespace geode::prelude;
 class SettingsUI : public geode::Popup {
 public:
     static SettingsUI* create();
-    bool setup();                    // ← sin override
+    bool init(float width, float height);      // ← init, no setup
 
 private:
     int m_currentTab = 0;
+
+    void buildUI();                            // ← antes era setup
 
     void createCounterTab();
     void createCirclesTab();
