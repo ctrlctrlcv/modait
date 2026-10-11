@@ -10,6 +10,13 @@ SettingsUI* SettingsUI::create() {
     auto ret = new SettingsUI();
     if (ret && ret->init(640.0f, 480.0f)) {
         ret->autorelease();
+
+        // ✅ Escalar para que quepa en pantalla
+        auto winSize = CCDirector::get()->getWinSize();
+        float scaleX = (winSize.width * 0.9f) / 640.0f;
+        float scaleY = (winSize.height * 0.9f) / 480.0f;
+        ret->setScale(std::min(scaleX, scaleY));
+
         return ret;
     }
     CC_SAFE_DELETE(ret);
