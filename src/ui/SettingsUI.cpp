@@ -2,10 +2,6 @@
 #include <Geode/utils/string.hpp>
 #include <algorithm>
 
-// ============================================================
-//  CREACIÓN
-// ============================================================
-
 SettingsUI* SettingsUI::create() {
     auto ret = new SettingsUI();
     if (ret && ret->init(640.0f, 480.0f)) {
@@ -16,24 +12,17 @@ SettingsUI* SettingsUI::create() {
     return nullptr;
 }
 
-// ============================================================
-//  SETUP INICIAL
-// ============================================================
-
 bool SettingsUI::setup() {
-    // Fondo oscuro
     auto bg = CCLayerColor::create({16, 16, 22, 255});
     bg->setContentSize(m_mainLayer->getContentSize());
     m_mainLayer->addChild(bg);
 
-    // Título
     auto title = CCLabelBMFont::create("OlkFPC Settings", "bigFont.fnt");
     title->setScale(0.6f);
     title->setPosition(320, 450);
     title->setColor({200, 200, 255});
     m_mainLayer->addChild(title);
 
-    // Pestañas laterales
     const char* tabs[] = {"Counter", "Circles", "Sounds", "Scan", "Recording", "Tools"};
 
     auto tabMenu = CCMenu::create();
@@ -52,20 +41,14 @@ bool SettingsUI::setup() {
         tabMenu->addChild(btn);
     }
 
-    // Fondo del contenido
     m_contentBg = CCLayerColor::create({22, 22, 30, 255}, 500, 420);
     m_contentBg->setPosition(110, 20);
     m_mainLayer->addChild(m_contentBg);
 
-    // Crear primera pestaña
     createCounterTab();
 
     return true;
 }
-
-// ============================================================
-//  CONTROL DE PESTAÑAS
-// ============================================================
 
 void SettingsUI::onTabClicked(CCObject* sender) {
     auto btn = dynamic_cast<CCMenuItemSpriteExtra*>(sender);
@@ -83,32 +66,25 @@ void SettingsUI::onTabClicked(CCObject* sender) {
         case 5: createToolsTab(); break;
     }
 
-    // Actualizar colores de las pestañas
-    if (auto children = m_mainLayer->getChildren()) {
-        CCObject* obj = nullptr;
-        CCARRAY_FOREACH(children, obj) {
-            auto menu = dynamic_cast<CCMenu*>(obj);
-            if (!menu) continue;
+    // Actualizar colores de las pestañas con getChildrenExt()
+    for (CCNode* child : m_mainLayer->getChildrenExt()) {
+        auto menu = dynamic_cast<CCMenu*>(child);
+        if (!menu) continue;
 
-            if (auto menuChildren = menu->getChildren()) {
-                CCObject* childObj = nullptr;
-                CCARRAY_FOREACH(menuChildren, childObj) {
-                    auto item = dynamic_cast<CCMenuItemSpriteExtra*>(childObj);
-                    if (!item) continue;
+        for (CCNode* menuChild : menu->getChildrenExt()) {
+            auto item = dynamic_cast<CCMenuItemSpriteExtra*>(menuChild);
+            if (!item) continue;
 
-                    // Solo procesar botones con tags 0-5 (las pestañas)
-                    int tag = item->getTag();
-                    if (tag < 0 || tag > 5) continue;
+            int tag = item->getTag();
+            if (tag < 0 || tag > 5) continue;
 
-                    auto label = dynamic_cast<CCLabelBMFont*>(item->getNormalImage());
-                    if (!label) continue;
+            auto label = dynamic_cast<CCLabelBMFont*>(item->getNormalImage());
+            if (!label) continue;
 
-                    if (tag == m_currentTab) {
-                        label->setColor({255, 255, 255});
-                    } else {
-                        label->setColor({100, 100, 120});
-                    }
-                }
+            if (tag == m_currentTab) {
+                label->setColor({255, 255, 255});
+            } else {
+                label->setColor({100, 100, 120});
             }
         }
     }
@@ -122,7 +98,7 @@ void SettingsUI::clearContent() {
 }
 
 // ============================================================
-//  HELPERS DE UI
+//  HELPERS
 // ============================================================
 
 void SettingsUI::addTitle(const char* text, float y) {
@@ -181,7 +157,6 @@ void SettingsUI::addSlider(const char* label, const char* settingKey,
     m_contentNodes.push_back(lbl);
     m_mainLayer->addChild(lbl);
 
-    // Etiqueta del valor actual
     auto valLabel = CCLabelBMFont::create(
         fmt::format("{:.1f}", value).c_str(), "chatFont.fnt");
     valLabel->setScale(0.4f);
@@ -190,7 +165,6 @@ void SettingsUI::addSlider(const char* label, const char* settingKey,
     m_contentNodes.push_back(valLabel);
     m_mainLayer->addChild(valLabel);
 
-    // SliderNode con callback de dos parámetros
     std::string keyCopy = settingKey;
     float range = maxVal - minVal;
 
@@ -225,7 +199,6 @@ void SettingsUI::addDropdown(const char* label, const char* settingKey,
     m_contentNodes.push_back(lbl);
     m_mainLayer->addChild(lbl);
 
-    // Mostrar la opción actual
     auto currentLabel = CCLabelBMFont::create(current.c_str(), "chatFont.fnt");
     currentLabel->setScale(0.45f);
     currentLabel->setPosition(450, y);
@@ -233,7 +206,6 @@ void SettingsUI::addDropdown(const char* label, const char* settingKey,
     m_contentNodes.push_back(currentLabel);
     m_mainLayer->addChild(currentLabel);
 
-    // Botón para ciclar entre opciones (simplificado)
     auto cycleBtn = CCMenuItemSpriteExtra::create(
         CCLabelBMFont::create(">", "bigFont.fnt"),
         this, nullptr);
@@ -266,39 +238,30 @@ void SettingsUI::addTextInput(const char* label, const char* settingKey, float y
 }
 
 // ============================================================
-//  PESTAÑA: COUNTER
+//  PESTAÑAS
 // ============================================================
 
 void SettingsUI::createCounterTab() {
     float y = 400;
-
     addTitle("ROWS IN THE TOP CORNER", y);
     y -= 30;
-    addDropdown("Rows Mode", "rows-mode",
-                {"Short", "Normal", "Personalize"}, y);
+    addDropdown("Rows Mode", "rows-mode", {"Short", "Normal", "Personalize"}, y);
     y -= 25;
     addDescription("Short: 1,2,3,4,5+ | Normal: 13-15,9-12,7-8,5-6,4,3,2,1", y);
     y -= 35;
-
     addToggle("Copy Counts", "copy-counts", y);
     y -= 35;
     addToggle("Count Straight Fly", "count-straight-fly", y);
     y -= 35;
     addToggle("Count Wave Spam", "count-wave-spam", y);
     y -= 35;
-
     addTitle("CUSTOM ROWS (Personalize)", y);
     y -= 30;
     addTextInput("Rows", "rows-custom", y);
 }
 
-// ============================================================
-//  PESTAÑA: CIRCLES
-// ============================================================
-
 void SettingsUI::createCirclesTab() {
     float y = 400;
-
     addTitle("CIRCLE APPEARANCE", y);
     y -= 40;
     addSlider("Circle Size (%)", "circle-size", 20.0f, 300.0f, y);
@@ -310,13 +273,8 @@ void SettingsUI::createCirclesTab() {
     addToggle("Number Beside Ring", "number-beside-ring", y);
 }
 
-// ============================================================
-//  PESTAÑA: SOUNDS
-// ============================================================
-
 void SettingsUI::createSoundsTab() {
     float y = 400;
-
     addTitle("SOUND CONFIGURATION", y);
     y -= 40;
     addToggle("Vary Pitch", "vary-pitch", y);
@@ -327,13 +285,8 @@ void SettingsUI::createSoundsTab() {
     addDescription("El pitch del BING! varía según la precisión del click", y);
 }
 
-// ============================================================
-//  PESTAÑA: SCAN
-// ============================================================
-
 void SettingsUI::createScanTab() {
     float y = 400;
-
     addTitle("SCAN CONFIGURATION", y);
     y -= 40;
     addDropdown("Frames Each Side", "scan-distance",
@@ -350,13 +303,8 @@ void SettingsUI::createScanTab() {
     addDescription("A click passes when alive after the next click", y);
 }
 
-// ============================================================
-//  PESTAÑA: RECORDING
-// ============================================================
-
 void SettingsUI::createRecordingTab() {
     float y = 400;
-
     addTitle("RECORDING & PLAYBACK", y);
     y -= 40;
     addSlider("Recording Speed (%)", "recording-speed", 20.0f, 500.0f, y);
@@ -368,13 +316,8 @@ void SettingsUI::createRecordingTab() {
     addDescription("Desactivado por defecto", y);
 }
 
-// ============================================================
-//  PESTAÑA: TOOLS
-// ============================================================
-
 void SettingsUI::createToolsTab() {
     float y = 400;
-
     addTitle("TOOLS", y);
     y -= 40;
     addToggle("Hitboxes", "show-hitboxes", y);
