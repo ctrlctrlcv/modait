@@ -13,7 +13,13 @@ FPSSettingsUI* FPSSettingsUI::create() {
     return nullptr;
 }
 
-bool FPSSettingsUI::setup() {
+bool FPSSettingsUI::init(float width, float height) {
+    if (!Popup::init(width, height)) return false;
+    buildUI();
+    return true;
+}
+
+void FPSSettingsUI::buildUI() {
     auto bg = CCLayerColor::create({18, 18, 24, 255});
     bg->setContentSize(m_mainLayer->getContentSize());
     m_mainLayer->addChild(bg);
@@ -47,7 +53,6 @@ bool FPSSettingsUI::setup() {
     m_macroFPSLabel->setColor({100, 255, 200});
     m_mainLayer->addChild(m_macroFPSLabel);
 
-    // ✅ Callback con DOS parámetros (SliderNode*, float)
     m_macroSlider = SliderNode::create([this](SliderNode* node, float value) {
         int fps = static_cast<int>(std::pow(10.0f, value * std::log10(30000.0f)));
         fps = std::clamp(fps, 1, 30000);
@@ -118,8 +123,6 @@ bool FPSSettingsUI::setup() {
     resetMenu->addChild(resetBtn);
     resetMenu->setPosition(250, 25);
     m_mainLayer->addChild(resetMenu);
-
-    return true;
 }
 
 void FPSSettingsUI::onPresetClicked(CCObject* sender) {
