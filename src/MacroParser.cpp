@@ -83,9 +83,11 @@ Result<MacroData> MacroParser::parseGDR(std::string const& s) {
             m.fps = std::strtod(line.c_str() + comma + 1, nullptr);
             continue;
         }
-        long long f = 0; int d = 1, pl = 1;
-        if (std::sscanf(line.c_str(), "%lld,%d,%d", &f, &d, &pl) < 2)
-            return Err("GDR line {}: expected frame,down[,player]", ln);
+        char* end = nullptr;
+        long long f = std::strtoll(line.c_str(), &end, 10);
+        if (end == line.c_str() || *end != ',') return Err("GDR line {}: expected frame,down[,player]", ln);
+        int d = static_cast<int>(std::strtol(end + 1, &end, 10));
+        int pl = (*end == ',') ? static_cast<int>(std::strtol(end + 1, nullptr, 10)) : 1;
         ClickEvent e; e.frame = f; e.down = d != 0; e.player2 = pl == 2;
         m.events.push_back(e);
     }
