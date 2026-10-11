@@ -11,24 +11,24 @@ endif()
 
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
-# Cambia "OlkFPC" por el nombre de tu proyecto
 project(OlkFPC VERSION 1.0.0)
 
-# Añade todos los archivos fuente recursivamente desde src/
+# Recoger todos los .cpp en src/ y subcarpetas
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
-# Crea la librería del mod
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
-# Verifica que la variable de entorno GEODE_SDK esté definida (la acción la configura por ti)
+# ⚠️ IMPORTANTE: Añadir src/ al include path
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
 if (NOT DEFINED ENV{GEODE_SDK})
-    message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
+    message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable.")
 else()
     message(STATUS "Found Geode: $ENV{GEODE_SDK}")
 endif()
 
-# Añade el SDK de Geode como submódulo
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
-# Configura dependencias, recursos y enlaza Geode
 setup_geode_mod(${PROJECT_NAME})
