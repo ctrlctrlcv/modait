@@ -4,19 +4,24 @@
 #include <Geode/modify/PlayerObject.hpp>
 
 #include "OlkFPC.hpp"
-#include "ui/OlkFPCUI.hpp"
+#include "ui/MainMenuUI.hpp"
 #include "ui/CirclesOverlay.hpp"
 #include "playback/PlaybackController.hpp"
-#include "FrameAnalyzer.hpp"
 
 using namespace geode::prelude;
 
+// ============================================================
+//  INICIALIZACIÓN DEL MOD
+// ============================================================
+
 $on_mod(Loaded) {
-    log::info("OlkFPC cargado correctamente");
+    log::info("OlkFPC: Mod cargado correctamente");
     OlkFPC::get()->onModLoaded();
 }
 
-#include "ui/MainMenuUI.hpp"
+// ============================================================
+//  PAUSE LAYER — Botón de acceso directo
+// ============================================================
 
 class $modify(OlkFPCPauseLayer, PauseLayer) {
     void customSetup() {
@@ -42,30 +47,43 @@ class $modify(OlkFPCPauseLayer, PauseLayer) {
     }
 };
 
+// ============================================================
+//  PLAY LAYER — Overlays
+// ============================================================
+
 class $modify(OlkFPCPlayLayer, PlayLayer) {
     struct Fields {
         CirclesOverlay* circlesOverlay = nullptr;
     };
+
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
+
         m_fields->circlesOverlay = CirclesOverlay::create();
         this->addChild(m_fields->circlesOverlay, 1000);
+
         OlkFPC::get()->onLevelStart();
         OlkFPC::get()->m_levelName = level->m_levelName;
         OlkFPC::get()->m_levelID = std::to_string(level->m_levelID);
         OlkFPC::get()->m_levelData = level->m_levelString;
+
         return true;
     }
-    void update(float dt) {
-        PlayLayer::update(dt);
-        // Playback
+
+    void onQuit() {
+        OlkFPC::get()->onLevelQuit();
+        PlayLayer::onQuit();
     }
-    void onQuit() { OlkFPC::get()->onLevelQuit(); PlayLayer::onQuit(); }
 };
+
+// ============================================================
+//  PLAYER OBJECT — Captura de inputs
+// ============================================================
 
 class $modify(OlkFPCPlayerObject, PlayerObject) {
     void pushButton(PlayerButton button) {
         PlayerObject::pushButton(button);
+
         auto& olk = *OlkFPC::get();
         if (olk.m_isRecording) {
             ClickData click;
@@ -77,9 +95,5 @@ class $modify(OlkFPCPlayerObject, PlayerObject) {
                 olk.m_clicks.push_back(click);
             }
         }
-    }
-    void releaseButton(PlayerButton button) {
-        PlayerObject::releaseButton(button);
-        // Lógica de release para grabación
     }
 };
