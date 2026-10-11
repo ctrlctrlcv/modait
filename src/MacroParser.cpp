@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <cstring>
+#include <regex>
 
 MacroFormat MacroParser::detectFormat(const std::filesystem::path& path) {
     std::string ext = path.extension().string();
