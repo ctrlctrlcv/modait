@@ -7,7 +7,7 @@ using namespace geode::prelude;
 class MainMenuUI : public geode::Popup {
 public:
     static MainMenuUI* create();
-    bool setup();                    // ← sin override
+    bool init(float width, float height);      // ← sobreescribir init, NO setup
 
     void showCounterTab();
     void showInsightsTab();
@@ -21,7 +21,7 @@ public:
     void onPlayback(CCObject*);
     void onInsights(CCObject*);
     void onReload(CCObject*);
-    void onTabClicked(CCObject*);    // ← añadido
+    void onTabClicked(CCObject*);
 
 private:
     int m_currentTab = 0;
@@ -29,6 +29,7 @@ private:
     CCLayerColor* m_contentBg = nullptr;
     std::vector<CCNode*> m_contentNodes;
 
+    void buildUI();                            // ← contenido (antes setup)
     void clearContent();
     void rebuildContent();
     void refreshGraph();
