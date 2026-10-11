@@ -2,211 +2,51 @@ name: Build OlkFPC
 
 on:
   push:
-    branches: [ main, master, develop ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:  # Permite ejecutarlo manualmente desde GitHub
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  # ============================================================
-  #  BUILD PARA WINDOWS
-  # ============================================================
-  build-windows:
-    name: Windows x64
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Geode CLI
-        shell: pwsh
-        run: |
-          Invoke-WebRequest -Uri "https://github.com/geode-sdk/cli/releases/latest/download/geode-cli-win.zip" -OutFile "geode-cli.zip"
-          Expand-Archive -Path "geode-cli.zip" -DestinationPath "$env:USERPROFILE\.geode"
-          echo "$env:USERPROFILE\.geode" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Configure CMake
-        run: |
-          cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build mod
-        run: |
-          cmake --build build --config Release
-
-      - name: Upload .geode artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OlkFPC-Windows
-          path: build/*.geode
-
-  # ============================================================
-  #  BUILD PARA ANDROID (arm64-v8a y armeabi-v7a)
-  # ============================================================
-  build-android:
-    name: Android (${{ matrix.abi }})
-    runs-on: ubuntu-latest
+  build:
     strategy:
+      fail-fast: false
       matrix:
-        abi: [ arm64-v8a, armeabi-v7a ]
+        config:
+          - name: Windows
+            os: windows-latest
+          - name: Android32
+            os: ubuntu-latest
+            target: Android32
+          - name: Android64
+            os: ubuntu-latest
+            target: Android64
+          - name: macOS
+            os: macos-latest
+          - name: iOS
+            os: macos-latest
+            target: iOS
+
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Build the mod
+        uses: geode-sdk/build-geode-mod@main
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          combine: true
+          target: ${{ matrix.config.target }}
 
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r26b
-          add-to-path: true
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Geode CLI
-        run: |
-          curl -L "https://github.com/geode-sdk/cli/releases/latest/download/geode-cli-linux.zip" -o geode-cli.zip
-          unzip geode-cli.zip -d $HOME/.geode
-          echo "$HOME/.geode" >> $GITHUB_PATH
-
-      - name: Configure CMake for Android
-        run: |
-          cmake -B build \
-            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.abi }} \
-            -DANDROID_PLATFORM=android-23 \
-            -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build mod
-        run: |
-          cmake --build build --config Release
-
-      - name: Upload .geode artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OlkFPC-Android-${{ matrix.abi }}
-          path: build/*.geode
-
-  # ============================================================
-  #  BUILD PARA macOS (Intel + Apple Silicon)
-  # ============================================================
-  build-macos:
-    name: macOS (${{ matrix.arch }})
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        arch: [ x86_64, arm64 ]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Geode CLI
-        run: |
-          curl -L "https://github.com/geode-sdk/cli/releases/latest/download/geode-cli-macos.zip" -o geode-cli.zip
-          unzip geode-cli.zip -d $HOME/.geode
-          echo "$HOME/.geode" >> $GITHUB_PATH
-
-      - name: Configure CMake
-        run: |
-          cmake -B build \
-            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
-            -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build mod
-        run: |
-          cmake --build build --config Release
-
-      - name: Upload .geode artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OlkFPC-macOS-${{ matrix.arch }}
-          path: build/*.geode
-
-  # ============================================================
-  #  BUILD PARA iOS (opcional)
-  # ============================================================
-  build-ios:
-    name: iOS
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Geode CLI
-        run: |
-          curl -L "https://github.com/geode-sdk/cli/releases/latest/download/geode-cli-macos.zip" -o geode-cli.zip
-          unzip geode-cli.zip -d $HOME/.geode
-          echo "$HOME/.geode" >> $GITHUB_PATH
-
-      - name: Configure CMake for iOS
-        run: |
-          cmake -B build \
-            -DCMAKE_SYSTEM_NAME=iOS \
-            -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
-            -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build mod
-        run: |
-          cmake --build build --config Release
-
-      - name: Upload .geode artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OlkFPC-iOS
-          path: build/*.geode
-
-  # ============================================================
-  #  RELEASE AUTOMÁTICO AL HACER TAG
-  # ============================================================
-  release:
-    name: Create Release
-    needs: [ build-windows, build-android, build-macos ]
+  package:
+    name: Package builds
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: ['build']
+
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
+      - uses: geode-sdk/build-geode-mod/combine@main
+        id: build
 
-      - name: Prepare release files
-        run: |
-          mkdir -p release
-          find artifacts -name "*.geode" -exec cp {} release/ \;
-          ls -la release/
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
         with:
-          files: release/*.geode
-          generate_release_notes: true
-          draft: false
-          prerelease: false
+          name: Build Output
+          path: ${{ steps.build.outputs.build-output }}
