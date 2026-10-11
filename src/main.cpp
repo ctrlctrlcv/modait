@@ -6,7 +6,7 @@
 #include "OlkFPC.hpp"
 #include "ui/MainMenuUI.hpp"
 #include "ui/CirclesOverlay.hpp"
-#include "playback/PlaybackController.hpp"
+#include "PlaybackController.hpp"          // ← CORREGIDO (sin "playback/")
 
 using namespace geode::prelude;
 
