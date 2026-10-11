@@ -1,7 +1,8 @@
 #include "SettingsUI.hpp"
 #include "FPSSettingsUI.hpp"
 #include "SettingWidgets.hpp"
-
+#include <algorithm>
+#include "SettingWidgets.hpp"
 using namespace geode::prelude;
 
 namespace fbfc {
@@ -144,12 +145,14 @@ void SettingsUI::selectTab(int i) {
 
 void SettingsUI::onToggle(CCObject* s) {
     auto* t = static_cast<CCMenuItemToggler*>(s);
-    (void)Mod::get()->setSettingValue<bool>(t->getID(), !t->isToggled());   // el toggler cambia después del callback
+    auto id = t->getID();
+    (void)Mod::get()->setSettingValue<bool>(std::string(id.data(), id.size()), !t->isToggled());
 }
 
 void SettingsUI::onCycle(CCObject* s) {
     auto* b = static_cast<CCMenuItemSpriteExtra*>(s);
-    std::string key = b->getID();
+    auto id = b->getID();
+    std::string key(id.data(), id.size());
     for (auto const& row : tabs()[m_tab].second) {
         if (key != row.key) continue;
         auto cur = Mod::get()->getSettingValue<std::string>(key);
