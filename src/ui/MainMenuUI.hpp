@@ -1,22 +1,19 @@
 #pragma once
 #include <Geode/Geode.hpp>
-#include "../OlkFPC.hpp"
-#include "../FrameAnalyzer.hpp"
+#include "OlkFPC.hpp"
 
 using namespace geode::prelude;
 
-class MainMenuUI : public geode::Popup<> {
+class MainMenuUI : public geode::Popup {   // ← Sin <>
 public:
     static MainMenuUI* create();
     bool setup() override;
 
-    // Secciones
     void showCounterTab();
     void showInsightsTab();
     void showSettingsTab();
     void showMacroGraph();
 
-    // Botones
     void onImport(CCObject*);
     void onExport(CCObject*);
     void onFPS(CCObject*);
