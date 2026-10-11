@@ -1,12 +1,8 @@
 #include "MainMenuUI.hpp"
 #include "FPSSettingsUI.hpp"
 #include "SettingsUI.hpp"
-#include "MacroParser.hpp"                    // ← añadido
+#include "MacroParser.hpp"
 #include <Geode/utils/file.hpp>
-
-// ============================================================
-//  CREACIÓN
-// ============================================================
 
 MainMenuUI* MainMenuUI::create() {
     auto ret = new MainMenuUI();
@@ -44,7 +40,6 @@ bool MainMenuUI::setup() {
     sub->setColor({120, 120, 150});
     m_mainLayer->addChild(sub);
 
-    // Pestañas
     const char* tabNames[] = {"Counter", "Insights", "Settings"};
     for (int i = 0; i < 3; ++i) {
         auto tabLabel = CCLabelBMFont::create(tabNames[i], "bigFont.fnt");
@@ -62,7 +57,6 @@ bool MainMenuUI::setup() {
         m_mainLayer->addChild(menu);
     }
 
-    // Botones de acción
     auto importBtn = CCMenuItemSpriteExtra::create(
         CCLabelBMFont::create("Import", "bigFont.fnt"),
         this, menu_selector(MainMenuUI::onImport));
@@ -105,10 +99,6 @@ bool MainMenuUI::setup() {
     return true;
 }
 
-// ============================================================
-//  CONTROL DE PESTAÑAS
-// ============================================================
-
 void MainMenuUI::onTabClicked(CCObject* sender) {
     auto btn = dynamic_cast<CCMenuItemSpriteExtra*>(sender);
     if (!btn) return;
@@ -124,13 +114,20 @@ void MainMenuUI::onTabClicked(CCObject* sender) {
 }
 
 void MainMenuUI::clearContent() {
-    for (auto n : m_contentNodes) n->removeFromParent();
+    for (auto n : m_contentNodes) {
+        if (n) n->removeFromParent();
+    }
     m_contentNodes.clear();
 }
 
-// ============================================================
-//  TAB: COUNTER
-// ============================================================
+void MainMenuUI::rebuildContent() {
+    clearContent();
+    switch (m_currentTab) {
+        case 0: showCounterTab(); break;
+        case 1: showInsightsTab(); break;
+        case 2: showSettingsTab(); break;
+    }
+}
 
 void MainMenuUI::showCounterTab() {
     m_currentTab = 0;
@@ -228,10 +225,6 @@ void MainMenuUI::refreshGraph() {
     m_mainLayer->addChild(summaryLbl);
 }
 
-// ============================================================
-//  TAB: INSIGHTS
-// ============================================================
-
 void MainMenuUI::showInsightsTab() {
     m_currentTab = 1;
     clearContent();
@@ -317,10 +310,6 @@ void MainMenuUI::showInsightsTab() {
     }
 }
 
-// ============================================================
-//  TAB: SETTINGS
-// ============================================================
-
 void MainMenuUI::showSettingsTab() {
     m_currentTab = 2;
     clearContent();
@@ -359,31 +348,35 @@ void MainMenuUI::showSettingsTab() {
 }
 
 // ============================================================
-//  CALLBACKS
+//  IMPORT / EXPORT (versión simplificada)
 // ============================================================
 
 void MainMenuUI::onImport(CCObject*) {
-    file::FilePickOptions options;
-    options.filters.push_back({
-        "Macros",
-        { "*.gdr", "*.gdr2", "*.cml", "*.ttr3", "*.json" }
-    });
+    // Busca macros en la carpeta de guardado del mod
+    auto dir = Mod::get()->getSaveDir();
+    std::vector<std::filesystem::path> found;
 
-    // Geode 5.11.1: usar .then() en lugar de .listen()
-    file::pick(file::PickMode::OpenFile, options).then(
-        [this](Result<std::optional<std::filesystem::path>> result) {
-            if (result.isErr()) {
-                Notification::create(result.unwrapErr(), NotificationIcon::Error)->show();
-                return;
+    if (std::filesystem::exists(dir)) {
+        for (auto& entry : std::filesystem::directory_iterator(dir)) {
+            auto ext = entry.path().extension().string();
+            if (ext == ".gdr" || ext == ".gdr2" || ext == ".cml" ||
+                ext == ".ttr3" || ext == ".json") {
+                found.push_back(entry.path());
             }
-            auto optPath = result.unwrap();
-            if (!optPath.has_value()) return;   // usuario canceló
-            auto path = optPath.value();
+        }
+    }
 
-            if (OlkFPC::get()->loadMacro(path)) {
-                this->rebuildContent();
-            }
-        });
+    if (found.empty()) {
+        Notification::create(
+            "Coloca un macro (.gdr/.cml/.ttr3/.json) en:\n" + dir.string(),
+            NotificationIcon::Info)->show();
+        return;
+    }
+
+    // Cargar el primer macro encontrado
+    if (OlkFPC::get()->loadMacro(found[0])) {
+        rebuildContent();
+    }
 }
 
 void MainMenuUI::onExport(CCObject*) {
@@ -393,29 +386,14 @@ void MainMenuUI::onExport(CCObject*) {
         return;
     }
 
-    file::FilePickOptions options;
-    options.filters.push_back({ "Macros", { "*.gdr", "*.json", "*.cml" } });
+    auto path = Mod::get()->getSaveDir() / "exported.gdr";
+    auto res = MacroParser::exportTo(olk.m_clicks, path, MacroFormat::GDR);
 
-    file::pick(file::PickMode::SaveFile, options).then(
-        [](Result<std::optional<std::filesystem::path>> result) {
-            if (result.isErr()) {
-                Notification::create(result.unwrapErr(), NotificationIcon::Error)->show();
-                return;
-            }
-            auto optPath = result.unwrap();
-            if (!optPath.has_value()) return;
-            auto path = optPath.value();
-
-            auto fmt = MacroParser::detectFormat(path);
-            if (fmt == MacroFormat::UNKNOWN) fmt = MacroFormat::GDR;
-
-            auto res = MacroParser::exportTo(OlkFPC::get()->m_clicks, path, fmt);
-            if (res.isErr()) {
-                Notification::create(res.unwrapErr(), NotificationIcon::Error)->show();
-            } else {
-                Notification::create("Macro exportado", NotificationIcon::Success)->show();
-            }
-        });
+    if (res.isErr()) {
+        Notification::create(res.unwrapErr(), NotificationIcon::Error)->show();
+    } else {
+        Notification::create("Exportado a:\n" + path.string(), NotificationIcon::Success)->show();
+    }
 }
 
 void MainMenuUI::onFPS(CCObject*) {
@@ -450,13 +428,4 @@ void MainMenuUI::onReload(CCObject*) {
     olk.loadMacro(olk.m_macroPath);
     rebuildContent();
     Notification::create("Macro recargado", NotificationIcon::Success)->show();
-}
-
-void MainMenuUI::rebuildContent() {
-    clearContent();
-    switch (m_currentTab) {
-        case 0: showCounterTab(); break;
-        case 1: showInsightsTab(); break;
-        case 2: showSettingsTab(); break;
-    }
 }
