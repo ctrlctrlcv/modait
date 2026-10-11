@@ -1,9 +1,10 @@
 #include "FPSSettingsUI.hpp"
 #include <Geode/utils/string.hpp>
+#include <cmath>
 
 FPSSettingsUI* FPSSettingsUI::create() {
     auto ret = new FPSSettingsUI();
-    if (ret && ret->init(500.0f, 400.0f)) {
+    if (ret && ret->init(500.0f, 400.0f)) {   // Popup::init ancho, alto
         ret->autorelease();
         return ret;
     }
@@ -12,30 +13,25 @@ FPSSettingsUI* FPSSettingsUI::create() {
 }
 
 bool FPSSettingsUI::setup() {
-    // Fondo oscuro
     auto bg = CCLayerColor::create({18, 18, 24, 255});
     bg->setContentSize(m_mainLayer->getContentSize());
     m_mainLayer->addChild(bg);
 
     auto mod = Mod::get();
 
-    // Título
     auto title = CCLabelBMFont::create("FPS Configuration", "bigFont.fnt");
     title->setScale(0.7f);
     title->setPosition(250, 360);
     title->setColor({200, 200, 255});
     m_mainLayer->addChild(title);
 
-    // Subtítulo
     auto subtitle = CCLabelBMFont::create("Customizable: 1 - 30000 FPS", "chatFont.fnt");
     subtitle->setScale(0.4f);
     subtitle->setPosition(250, 335);
     subtitle->setColor({120, 120, 150});
     m_mainLayer->addChild(subtitle);
 
-    // ============================================================
-    //  MACRO FPS
-    // ============================================================
+    // ============ MACRO FPS ============
     int macroFps = static_cast<int>(mod->getSettingValue<int64_t>("macro-fps"));
 
     auto macroLbl = CCLabelBMFont::create("Macro FPS", "chatFont.fnt");
@@ -50,13 +46,20 @@ bool FPSSettingsUI::setup() {
     m_macroFPSLabel->setColor({100, 255, 200});
     m_mainLayer->addChild(m_macroFPSLabel);
 
-    // Slider Macro FPS (logarítmico para cubrir 1-30000)
-    m_macroSlider = Slider::create(this, menu_selector(FPSSettingsUI::onMacroFPSChanged), 0.8f);
+    // ✅ SliderNode con callback
+    m_macroSlider = SliderNode::create([this](float value) {
+        int fps = static_cast<int>(std::pow(10, value * std::log10(30000.0f)));
+        fps = std::clamp(fps, 1, 30000);
+        m_macroFPSLabel->setString(std::to_string(fps).c_str());
+        Mod::get()->setSettingValue<int64_t>("macro-fps", fps);
+    });
     m_macroSlider->setPosition(250, 230);
+    m_macroSlider->setMin(0.0f);
+    m_macroSlider->setMax(1.0f);
     m_macroSlider->setValue(std::log10(macroFps) / std::log10(30000.0f));
     m_mainLayer->addChild(m_macroSlider);
 
-    // Presets de FPS comunes
+    // Presets
     auto presetMenu = CCMenu::create();
     presetMenu->setPosition(0, 0);
     m_mainLayer->addChild(presetMenu);
@@ -72,9 +75,7 @@ bool FPSSettingsUI::setup() {
         presetMenu->addChild(btn);
     }
 
-    // ============================================================
-    //  SCAN FPS
-    // ============================================================
+    // ============ SCAN FPS ============
     int scanFps = static_cast<int>(mod->getSettingValue<int64_t>("scan-fps"));
 
     auto scanLbl = CCLabelBMFont::create("Scan FPS", "chatFont.fnt");
@@ -89,12 +90,18 @@ bool FPSSettingsUI::setup() {
     m_scanFPSLabel->setColor({255, 200, 100});
     m_mainLayer->addChild(m_scanFPSLabel);
 
-    m_scanSlider = Slider::create(this, menu_selector(FPSSettingsUI::onScanFPSChanged), 0.8f);
+    m_scanSlider = SliderNode::create([this](float value) {
+        int fps = static_cast<int>(std::pow(10, value * std::log10(30000.0f)));
+        fps = std::clamp(fps, 1, 30000);
+        m_scanFPSLabel->setString(std::to_string(fps).c_str());
+        Mod::get()->setSettingValue<int64_t>("scan-fps", fps);
+    });
     m_scanSlider->setPosition(250, 100);
+    m_scanSlider->setMin(0.0f);
+    m_scanSlider->setMax(1.0f);
     m_scanSlider->setValue(std::log10(scanFps) / std::log10(30000.0f));
     m_mainLayer->addChild(m_scanSlider);
 
-    // Advertencia de rendimiento
     auto warning = CCLabelBMFont::create(
         "Valores altos aumentan el tiempo de análisis", "chatFont.fnt");
     warning->setScale(0.35f);
@@ -102,7 +109,6 @@ bool FPSSettingsUI::setup() {
     warning->setColor({255, 150, 100});
     m_mainLayer->addChild(warning);
 
-    // Botón de reset
     auto resetBtn = CCMenuItemSpriteExtra::create(
         CCLabelBMFont::create("Reset to 240", "chatFont.fnt"),
         this, menu_selector(FPSSettingsUI::onPresetClicked));
@@ -113,31 +119,6 @@ bool FPSSettingsUI::setup() {
     m_mainLayer->addChild(resetMenu);
 
     return true;
-}
-
-void FPSSettingsUI::onMacroFPSChanged(CCObject* sender) {
-    auto slider = dynamic_cast<Slider*>(sender);
-    if (!slider) return;
-
-    // Escala logarítmica: 1 a 30000
-    float value = slider->getValue();
-    int fps = static_cast<int>(std::pow(10, value * std::log10(30000.0f)));
-    fps = std::clamp(fps, 1, 30000);
-
-    m_macroFPSLabel->setString(std::to_string(fps).c_str());
-    Mod::get()->setSettingValue<int64_t>("macro-fps", fps);
-}
-
-void FPSSettingsUI::onScanFPSChanged(CCObject* sender) {
-    auto slider = dynamic_cast<Slider*>(sender);
-    if (!slider) return;
-
-    float value = slider->getValue();
-    int fps = static_cast<int>(std::pow(10, value * std::log10(30000.0f)));
-    fps = std::clamp(fps, 1, 30000);
-
-    m_scanFPSLabel->setString(std::to_string(fps).c_str());
-    Mod::get()->setSettingValue<int64_t>("scan-fps", fps);
 }
 
 void FPSSettingsUI::onPresetClicked(CCObject* sender) {
