@@ -1,6 +1,8 @@
 #include "MainMenuUI.hpp"
 #include "FPSSettingsUI.hpp"
 #include "SettingsUI.hpp"
+#include "MacroParser.hpp"                    // ← añadido
+#include <Geode/utils/file.hpp>
 
 // ============================================================
 //  CREACIÓN
@@ -17,12 +19,10 @@ MainMenuUI* MainMenuUI::create() {
 }
 
 bool MainMenuUI::setup() {
-    // Fondo oscuro minimalista
     auto bg = CCLayerColor::create({18, 18, 24, 255});
     bg->setContentSize(m_mainLayer->getContentSize());
     m_mainLayer->addChild(bg);
 
-    // Barra de título
     auto titleBar = CCLayerColor::create({28, 28, 38, 255}, 720, 45);
     titleBar->setPosition(0, 475);
     m_mainLayer->addChild(titleBar);
@@ -33,7 +33,6 @@ bool MainMenuUI::setup() {
     title->setColor({200, 200, 255});
     m_mainLayer->addChild(title);
 
-    // Subtítulo con el nombre del macro actual
     auto& olk = *OlkFPC::get();
     std::string macroInfo = olk.m_macroName.empty()
         ? "No macro cargado"
@@ -45,7 +44,7 @@ bool MainMenuUI::setup() {
     sub->setColor({120, 120, 150});
     m_mainLayer->addChild(sub);
 
-    // Pestañas principales
+    // Pestañas
     const char* tabNames[] = {"Counter", "Insights", "Settings"};
     for (int i = 0; i < 3; ++i) {
         auto tabLabel = CCLabelBMFont::create(tabNames[i], "bigFont.fnt");
@@ -63,7 +62,7 @@ bool MainMenuUI::setup() {
         m_mainLayer->addChild(menu);
     }
 
-    // Botones de acción inferiores
+    // Botones de acción
     auto importBtn = CCMenuItemSpriteExtra::create(
         CCLabelBMFont::create("Import", "bigFont.fnt"),
         this, menu_selector(MainMenuUI::onImport));
@@ -98,14 +97,11 @@ bool MainMenuUI::setup() {
     actionMenu->setPosition(0, 0);
     m_mainLayer->addChild(actionMenu);
 
-    // Fondo del contenido
     m_contentBg = CCLayerColor::create({22, 22, 30, 255}, 660, 380);
     m_contentBg->setPosition(30, 60);
     m_mainLayer->addChild(m_contentBg);
 
-    // Mostrar tab por defecto
     showCounterTab();
-
     return true;
 }
 
@@ -113,18 +109,23 @@ bool MainMenuUI::setup() {
 //  CONTROL DE PESTAÑAS
 // ============================================================
 
-void MainMenuUI::clearContent() {
-    for (auto n : m_contentNodes) n->removeFromParent();
-    m_contentNodes.clear();
-}
+void MainMenuUI::onTabClicked(CCObject* sender) {
+    auto btn = dynamic_cast<CCMenuItemSpriteExtra*>(sender);
+    if (!btn) return;
 
-void MainMenuUI::rebuildContent() {
+    m_currentTab = btn->getTag();
     clearContent();
+
     switch (m_currentTab) {
         case 0: showCounterTab(); break;
         case 1: showInsightsTab(); break;
         case 2: showSettingsTab(); break;
     }
+}
+
+void MainMenuUI::clearContent() {
+    for (auto n : m_contentNodes) n->removeFromParent();
+    m_contentNodes.clear();
 }
 
 // ============================================================
@@ -154,7 +155,6 @@ void MainMenuUI::refreshGraph() {
         return;
     }
 
-    // Título del gráfico
     auto graphTitle = CCLabelBMFont::create(
         "FRAME WINDOW DISTRIBUTION", "bigFont.fnt");
     graphTitle->setScale(0.5f);
@@ -163,7 +163,6 @@ void MainMenuUI::refreshGraph() {
     m_contentNodes.push_back(graphTitle);
     m_mainLayer->addChild(graphTitle);
 
-    // Barras del gráfico
     float barWidth = 40.0f;
     float maxHeight = 180.0f;
     float startX = 100.0f;
@@ -216,10 +215,9 @@ void MainMenuUI::refreshGraph() {
         m_mainLayer->addChild(cnt);
     }
 
-    // Resumen de stats
     auto& ins = olk.m_insights;
     std::string summary = fmt::format(
-        "Total: {} clicks | Exact: {} | Tightest: {} | Median: {}",
+        "Total: {} | Exact: {} | Tightest: {} | Median: {}",
         ins.totalClicks, ins.exact, ins.tightest, ins.median);
 
     auto summaryLbl = CCLabelBMFont::create(summary.c_str(), "chatFont.fnt");
@@ -239,8 +237,6 @@ void MainMenuUI::showInsightsTab() {
     clearContent();
 
     auto& ins = OlkFPC::get()->m_insights;
-
-    // Estadísticas principales
     float statY = 380;
 
     struct StatInfo {
@@ -258,10 +254,9 @@ void MainMenuUI::showInsightsTab() {
         {"BUSIEST", std::to_string(ins.busiestSecond), {255, 200, 100}, "clicks/sec"}
     };
 
-    float xStart = 120;
     for (size_t i = 0; i < stats.size(); ++i) {
         auto& s = stats[i];
-        float x = xStart + i * 140;
+        float x = 120 + i * 140;
 
         auto lbl = CCLabelBMFont::create(s.label, "bigFont.fnt");
         lbl->setScale(0.35f);
@@ -285,7 +280,6 @@ void MainMenuUI::showInsightsTab() {
         m_mainLayer->addChild(sub);
     }
 
-    // Hardest Clicks
     auto hardTitle = CCLabelBMFont::create("HARDEST CLICKS", "bigFont.fnt");
     hardTitle->setScale(0.45f);
     hardTitle->setPosition(360, 300);
@@ -324,7 +318,7 @@ void MainMenuUI::showInsightsTab() {
 }
 
 // ============================================================
-//  TAB: SETTINGS (abre la ventana completa)
+//  TAB: SETTINGS
 // ============================================================
 
 void MainMenuUI::showSettingsTab() {
@@ -351,7 +345,6 @@ void MainMenuUI::showSettingsTab() {
     m_contentNodes.push_back(hint);
     m_mainLayer->addChild(hint);
 
-    // Botón grande para abrir Settings
     auto settingsBtn = CCMenuItemSpriteExtra::create(
         CCLabelBMFont::create("Open Full Settings", "bigFont.fnt"),
         this, menu_selector(MainMenuUI::onSettings));
@@ -366,24 +359,27 @@ void MainMenuUI::showSettingsTab() {
 }
 
 // ============================================================
-//  CALLBACKS DE BOTONES
+//  CALLBACKS
 // ============================================================
 
 void MainMenuUI::onImport(CCObject*) {
-    // Abrir file picker con Geode
     file::FilePickOptions options;
     options.filters.push_back({
         "Macros",
-        { "*.gdr", "*.gdr2", "*.cml", "*.ttr3", "*.json", "*.gdr.json" }
+        { "*.gdr", "*.gdr2", "*.cml", "*.ttr3", "*.json" }
     });
 
-    file::pick(file::PickMode::OpenFile, options).listen(
-        [this](Result<std::filesystem::path>* result) {
-            if (result->isErr()) {
-                Notification::create(result->unwrapErr(), NotificationIcon::Error)->show();
+    // Geode 5.11.1: usar .then() en lugar de .listen()
+    file::pick(file::PickMode::OpenFile, options).then(
+        [this](Result<std::optional<std::filesystem::path>> result) {
+            if (result.isErr()) {
+                Notification::create(result.unwrapErr(), NotificationIcon::Error)->show();
                 return;
             }
-            auto path = result->unwrap();
+            auto optPath = result.unwrap();
+            if (!optPath.has_value()) return;   // usuario canceló
+            auto path = optPath.value();
+
             if (OlkFPC::get()->loadMacro(path)) {
                 this->rebuildContent();
             }
@@ -398,21 +394,22 @@ void MainMenuUI::onExport(CCObject*) {
     }
 
     file::FilePickOptions options;
-    options.filters.push_back({
-        "Macros",
-        { "*.gdr", "*.json", "*.cml" }
-    });
+    options.filters.push_back({ "Macros", { "*.gdr", "*.json", "*.cml" } });
 
-    file::pick(file::PickMode::SaveFile, options).listen(
-        [&olk](Result<std::filesystem::path>* result) {
-            if (result->isErr()) {
-                Notification::create(result->unwrapErr(), NotificationIcon::Error)->show();
+    file::pick(file::PickMode::SaveFile, options).then(
+        [](Result<std::optional<std::filesystem::path>> result) {
+            if (result.isErr()) {
+                Notification::create(result.unwrapErr(), NotificationIcon::Error)->show();
                 return;
             }
-            auto path = result->unwrap();
+            auto optPath = result.unwrap();
+            if (!optPath.has_value()) return;
+            auto path = optPath.value();
+
             auto fmt = MacroParser::detectFormat(path);
             if (fmt == MacroFormat::UNKNOWN) fmt = MacroFormat::GDR;
-            auto res = MacroParser::exportTo(olk.m_clicks, path, fmt);
+
+            auto res = MacroParser::exportTo(OlkFPC::get()->m_clicks, path, fmt);
             if (res.isErr()) {
                 Notification::create(res.unwrapErr(), NotificationIcon::Error)->show();
             } else {
@@ -453,4 +450,13 @@ void MainMenuUI::onReload(CCObject*) {
     olk.loadMacro(olk.m_macroPath);
     rebuildContent();
     Notification::create("Macro recargado", NotificationIcon::Success)->show();
+}
+
+void MainMenuUI::rebuildContent() {
+    clearContent();
+    switch (m_currentTab) {
+        case 0: showCounterTab(); break;
+        case 1: showInsightsTab(); break;
+        case 2: showSettingsTab(); break;
+    }
 }
