@@ -1,15 +1,14 @@
 #pragma once
 #include <Geode/Geode.hpp>
+#include <Geode/modify/PauseLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/PlayerObject.hpp>
-#include <Geode/modify/PauseLayer.hpp>
 #include <filesystem>
 #include <vector>
 #include <map>
 #include <string>
 #include <cmath>
 #include <algorithm>
-#include <matjson.hpp>
 
 using namespace geode::prelude;
 
@@ -55,6 +54,13 @@ struct InsightsData {
 };
 
 // ============================================================
+//  FORWARD DECLARATIONS (para evitar includes circulares)
+// ============================================================
+
+class PlaybackController;
+class RenderManager;
+
+// ============================================================
 //  OLKFPC — CLASE PRINCIPAL
 // ============================================================
 
@@ -62,23 +68,27 @@ class OlkFPC {
 public:
     static OlkFPC* get();
 
+    // Ciclo de vida
     void onModLoaded();
     void onLevelStart();
     void onLevelQuit();
 
+    // Análisis
     bool loadMacro(const std::filesystem::path& path);
     void analyzeClicks();
-    void computeFrameWindows();
 
+    // Reproducción
     void startPlayback();
     void stopPlayback();
     void startRecording();
     void stopRecording();
 
+    // UI
     void openMainMenu();
-    void openSettings();
-    void openInsights();
 
+    // ============================================================
+    //  DATOS PÚBLICOS (accesibles desde todos los componentes)
+    // ============================================================
     std::vector<ClickData> m_clicks;
     InsightsData m_insights;
     MacroFormat m_currentFormat = MacroFormat::UNKNOWN;
@@ -93,7 +103,12 @@ public:
     bool m_isRendering = false;
     bool m_analysisDone = false;
 
+    // Componentes (declarados como punteros, forward-declared)
+    PlaybackController* m_playbackController = nullptr;
+    RenderManager* m_renderManager = nullptr;
+
 private:
     static OlkFPC* s_instance;
     OlkFPC() = default;
+    ~OlkFPC() = default;
 };
