@@ -1,5 +1,10 @@
 #include "SettingsUI.hpp"
 #include <Geode/utils/string.hpp>
+#include <algorithm>
+
+// ============================================================
+//  CREACIÓN
+// ============================================================
 
 SettingsUI* SettingsUI::create() {
     auto ret = new SettingsUI();
@@ -10,6 +15,10 @@ SettingsUI* SettingsUI::create() {
     CC_SAFE_DELETE(ret);
     return nullptr;
 }
+
+// ============================================================
+//  SETUP INICIAL
+// ============================================================
 
 bool SettingsUI::setup() {
     // Fondo oscuro
@@ -26,6 +35,11 @@ bool SettingsUI::setup() {
 
     // Pestañas laterales
     const char* tabs[] = {"Counter", "Circles", "Sounds", "Scan", "Recording", "Tools"};
+
+    auto tabMenu = CCMenu::create();
+    tabMenu->setPosition(0, 0);
+    m_mainLayer->addChild(tabMenu);
+
     for (int i = 0; i < 6; ++i) {
         auto tabLabel = CCLabelBMFont::create(tabs[i], "bigFont.fnt");
         tabLabel->setScale(0.45f);
@@ -35,11 +49,7 @@ bool SettingsUI::setup() {
             tabLabel, this, menu_selector(SettingsUI::onTabClicked));
         btn->setTag(i);
         btn->setPosition(60, 400 - i * 55);
-
-        auto menu = CCMenu::create();
-        menu->addChild(btn);
-        menu->setPosition(0, 0);
-        m_mainLayer->addChild(menu);
+        tabMenu->addChild(btn);
     }
 
     // Fondo del contenido
@@ -53,10 +63,9 @@ bool SettingsUI::setup() {
     return true;
 }
 
-void SettingsUI::clearContent() {
-    for (auto n : m_contentNodes) n->removeFromParent();
-    m_contentNodes.clear();
-}
+// ============================================================
+//  CONTROL DE PESTAÑAS
+// ============================================================
 
 void SettingsUI::onTabClicked(CCObject* sender) {
     auto btn = dynamic_cast<CCMenuItemSpriteExtra*>(sender);
@@ -75,9 +84,41 @@ void SettingsUI::onTabClicked(CCObject* sender) {
     }
 
     // Actualizar colores de las pestañas
-    for (auto child : m_mainLayer->getChildren()) {
-        // ... (lógica de actualización de colores)
+    if (auto children = m_mainLayer->getChildren()) {
+        CCObject* obj = nullptr;
+        CCARRAY_FOREACH(children, obj) {
+            auto menu = dynamic_cast<CCMenu*>(obj);
+            if (!menu) continue;
+
+            if (auto menuChildren = menu->getChildren()) {
+                CCObject* childObj = nullptr;
+                CCARRAY_FOREACH(menuChildren, childObj) {
+                    auto item = dynamic_cast<CCMenuItemSpriteExtra*>(childObj);
+                    if (!item) continue;
+
+                    // Solo procesar botones con tags 0-5 (las pestañas)
+                    int tag = item->getTag();
+                    if (tag < 0 || tag > 5) continue;
+
+                    auto label = dynamic_cast<CCLabelBMFont*>(item->getNormalImage());
+                    if (!label) continue;
+
+                    if (tag == m_currentTab) {
+                        label->setColor({255, 255, 255});
+                    } else {
+                        label->setColor({100, 100, 120});
+                    }
+                }
+            }
+        }
     }
+}
+
+void SettingsUI::clearContent() {
+    for (auto n : m_contentNodes) {
+        if (n) n->removeFromParent();
+    }
+    m_contentNodes.clear();
 }
 
 // ============================================================
@@ -129,7 +170,7 @@ void SettingsUI::addToggle(const char* label, const char* settingKey, float y) {
 }
 
 void SettingsUI::addSlider(const char* label, const char* settingKey,
-                            float min, float max, float y) {
+                            float minVal, float maxVal, float y) {
     auto mod = Mod::get();
     double value = mod->getSettingValue<double>(settingKey);
 
@@ -140,18 +181,36 @@ void SettingsUI::addSlider(const char* label, const char* settingKey,
     m_contentNodes.push_back(lbl);
     m_mainLayer->addChild(lbl);
 
-    auto slider = Slider::create(this, nullptr, 0.8f);
-    slider->setPosition(360, y - 10);
-    slider->setValue(static_cast<float>((value - min) / (max - min)));
-    m_contentNodes.push_back(slider);
-    m_mainLayer->addChild(slider);
-
+    // Etiqueta del valor actual
     auto valLabel = CCLabelBMFont::create(
         fmt::format("{:.1f}", value).c_str(), "chatFont.fnt");
     valLabel->setScale(0.4f);
     valLabel->setPosition(550, y - 10);
+    valLabel->setColor({200, 200, 255});
     m_contentNodes.push_back(valLabel);
     m_mainLayer->addChild(valLabel);
+
+    // SliderNode con callback de dos parámetros
+    std::string keyCopy = settingKey;
+    float range = maxVal - minVal;
+
+    auto slider = SliderNode::create([keyCopy, valLabel, minVal, range]
+                                       (SliderNode* node, float v) {
+        double newVal = minVal + v * range;
+        valLabel->setString(fmt::format("{:.1f}", newVal).c_str());
+        Mod::get()->setSettingValue<double>(keyCopy, newVal);
+    });
+
+    slider->setPosition(360, y - 10);
+    slider->setMin(0.0f);
+    slider->setMax(1.0f);
+    float normalized = (range > 0.0f)
+        ? static_cast<float>((value - minVal) / range)
+        : 0.0f;
+    slider->setValue(std::clamp(normalized, 0.0f, 1.0f));
+
+    m_contentNodes.push_back(slider);
+    m_mainLayer->addChild(slider);
 }
 
 void SettingsUI::addDropdown(const char* label, const char* settingKey,
@@ -174,23 +233,15 @@ void SettingsUI::addDropdown(const char* label, const char* settingKey,
     m_contentNodes.push_back(currentLabel);
     m_mainLayer->addChild(currentLabel);
 
-    // Flechas para cambiar (simplificado)
-    auto leftArrow = CCMenuItemSpriteExtra::create(
-        CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png"),
+    // Botón para ciclar entre opciones (simplificado)
+    auto cycleBtn = CCMenuItemSpriteExtra::create(
+        CCLabelBMFont::create(">", "bigFont.fnt"),
         this, nullptr);
-    leftArrow->setPosition(360, y);
-    leftArrow->setScale(0.5f);
-
-    auto rightArrow = CCMenuItemSpriteExtra::create(
-        CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png"),
-        this, nullptr);
-    rightArrow->setPosition(540, y);
-    rightArrow->setScale(0.5f);
-    rightArrow->setRotation(180);
+    cycleBtn->setPosition(540, y);
+    cycleBtn->setScale(0.6f);
 
     auto menu = CCMenu::create();
-    menu->addChild(leftArrow);
-    menu->addChild(rightArrow);
+    menu->addChild(cycleBtn);
     menu->setPosition(0, 0);
     m_contentNodes.push_back(menu);
     m_mainLayer->addChild(menu);
@@ -225,9 +276,9 @@ void SettingsUI::createCounterTab() {
     y -= 30;
     addDropdown("Rows Mode", "rows-mode",
                 {"Short", "Normal", "Personalize"}, y);
-    y -= 30;
+    y -= 25;
     addDescription("Short: 1,2,3,4,5+ | Normal: 13-15,9-12,7-8,5-6,4,3,2,1", y);
-    y -= 40;
+    y -= 35;
 
     addToggle("Copy Counts", "copy-counts", y);
     y -= 35;
@@ -295,7 +346,7 @@ void SettingsUI::createScanTab() {
     addDropdown("Scan Speed", "scan-speed", {"FULL", "FAST", "FASTEST"}, y);
     y -= 40;
     addToggle("Local Check", "local-check", y);
-    y -= 40;
+    y -= 30;
     addDescription("A click passes when alive after the next click", y);
 }
 
@@ -313,7 +364,7 @@ void SettingsUI::createRecordingTab() {
     addSlider("Playback Speed (%)", "playback-speed", 20.0f, 500.0f, y);
     y -= 60;
     addToggle("Click During Playback", "click-during-playback", y);
-    y -= 40;
+    y -= 30;
     addDescription("Desactivado por defecto", y);
 }
 
@@ -327,17 +378,17 @@ void SettingsUI::createToolsTab() {
     addTitle("TOOLS", y);
     y -= 40;
     addToggle("Hitboxes", "show-hitboxes", y);
-    y -= 35;
+    y -= 32;
     addToggle("Hitboxes on Death", "hitboxes-on-death", y);
-    y -= 35;
+    y -= 32;
     addToggle("Hitbox Trail", "hitbox-trail", y);
-    y -= 35;
+    y -= 32;
     addToggle("Trajectory", "show-trajectory", y);
-    y -= 35;
+    y -= 32;
     addToggle("Frame Stepper", "frame-stepper", y);
-    y -= 35;
+    y -= 32;
     addToggle("Input Display", "input-display", y);
-    y -= 35;
+    y -= 40;
     addDropdown("Render Preset", "render-preset",
                 {"720p30", "720p60", "1080p30", "1080p60",
                  "1440p60", "4K30", "4K60", "Custom"}, y);
