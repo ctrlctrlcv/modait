@@ -64,9 +64,10 @@ Result<std::vector<ClickData>> MacroParser::parse(
 Result<std::vector<ClickData>> MacroParser::parseCML(const std::string& content) {
     std::vector<ClickData> clicks;
 
-    // Regex para extraer atributos de los <click ... />
+    // Regex corregido: se usa un delimitador personalizado "rx" para evitar
+    // que el terminador )" aparezca dentro del patrón.
     std::regex clickRegex(R"(<click\s+([^>]+)/>)");
-    std::regex attrRegex(R"((\w+)="([^"]*)")");
+    std::regex attrRegex(R"rx((\w+)="([^"]*)")rx");
 
     auto begin = std::sregex_iterator(content.begin(), content.end(), clickRegex);
     auto end = std::sregex_iterator();
@@ -185,13 +186,13 @@ Result<std::vector<ClickData>> MacroParser::parseGDR2(const std::string& content
 
     auto parseResult = matjson::parse(content);
     if (parseResult.isErr()) {
-        // Si falla el JSON, intentar parsear como GDR plano
         return parseGDR(content);
     }
 
     auto json = parseResult.unwrap();
 
-    if (!json.is_object()) {
+    // API de matjson en Geode 5.x: se usan métodos camelCase
+    if (!json.isObject()) {
         return parseGDR(content);
     }
 
@@ -201,12 +202,12 @@ Result<std::vector<ClickData>> MacroParser::parseGDR2(const std::string& content
 
     for (auto& c : json["clicks"]) {
         ClickData click;
-        click.frame = c["frame"].as_int();
+        click.frame = c["frame"].asInt();
         click.time = c.contains("time")
-            ? static_cast<float>(c["time"].as_double())
+            ? static_cast<float>(c["time"].asDouble())
             : (click.frame / 240.0f);
-        click.isHold = c.contains("hold") && c["hold"].as_bool();
-        click.player2 = c.contains("player") && c["player"].as_int() == 2;
+        click.isHold = c.contains("hold") && c["hold"].asBool();
+        click.player2 = c.contains("player") && c["player"].asInt() == 2;
         clicks.push_back(click);
     }
 
@@ -227,31 +228,30 @@ Result<std::vector<ClickData>> MacroParser::parseJSON(const std::string& content
 
     auto json = parseResult.unwrap();
 
-    // Buscar el array de inputs en varias claves comunes
     bool found = false;
     auto processArray = [&](matjson::Value& arr) {
-        if (!arr.is_array()) return;
+        if (!arr.isArray()) return;
         found = true;
         for (auto& item : arr) {
             ClickData click;
-            if (item.is_object()) {
-                click.frame = item.contains("frame") ? item["frame"].as_int() : 0;
+            if (item.isObject()) {
+                click.frame = item.contains("frame") ? item["frame"].asInt() : 0;
                 click.time = item.contains("time")
-                    ? static_cast<float>(item["time"].as_double())
+                    ? static_cast<float>(item["time"].asDouble())
                     : (click.frame / 240.0f);
-                click.isHold = item.contains("hold") && item["hold"].as_bool();
-                click.player2 = item.contains("player") && item["player"].as_int() == 2;
-            } else if (item.is_number()) {
-                click.frame = item.as_int();
+                click.isHold = item.contains("hold") && item["hold"].asBool();
+                click.player2 = item.contains("player") && item["player"].asInt() == 2;
+            } else if (item.isNumber()) {
+                click.frame = item.asInt();
                 click.time = click.frame / 240.0f;
             }
             clicks.push_back(click);
         }
     };
 
-    if (json.is_array()) {
+    if (json.isArray()) {
         processArray(json);
-    } else if (json.is_object()) {
+    } else if (json.isObject()) {
         if (json.contains("inputs"))       processArray(json["inputs"]);
         else if (json.contains("clicks"))  processArray(json["clicks"]);
         else if (json.contains("frames"))  processArray(json["frames"]);
