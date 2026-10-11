@@ -1,15 +1,15 @@
 #pragma once
 #include <Geode/Geode.hpp>
+#include <Geode/ui/Popup.hpp>
 
 namespace fbfc {
 
-// Sliders logarítmicos (1..30000) + presets para macro-fps y scan-fps.
-class FPSSettingsUI : public geode::Popup<> {
+class FPSSettingsUI : public geode::Popup {
 public:
     static FPSSettingsUI* create();
     static void open();
 protected:
-    bool setup() override;
+    bool init();
 private:
     void onPreset(cocos2d::CCObject*);
     void rebuild();
