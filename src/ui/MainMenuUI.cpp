@@ -134,15 +134,17 @@ void MainMenuUI::onAnalyze(CCObject*) {
 void MainMenuUI::onImport(CCObject*) {
     file::FilePickOptions opts;
     opts.filters = {{"Macros", {"*.gdr", "*.json", "*.gdr2", "*.cml", "*.ttr3"}}};
-    m_pick.bind([this](auto* ev) {
-        auto* res = ev->getValue();
-        if (!res || !res->isOk()) return;
-        auto m = MacroParser::load(res->unwrap());
-        if (!m) { FLAlertLayer::create("Import failed", m.unwrapErr(), "OK")->show(); return; }
-        auto r = OlkFPC::get().requestAnalysis(std::move(m).unwrap());
-        if (!r) FLAlertLayer::create("Analyzer", r.unwrapErr(), "OK")->show();
-    });
-    m_pick.setFilter(file::pick(file::PickMode::OpenFile, opts));
+    async::spawn(
+        file::pick(file::PickMode::OpenFile, opts),
+        [](Result<std::optional<std::filesystem::path>> res) {
+            if (!res.isOk()) return;
+            auto opt = std::move(res).unwrap();
+            if (!opt) return;
+            auto m = MacroParser::load(*opt);
+            if (!m) { FLAlertLayer::create("Import failed", m.unwrapErr(), "OK")->show(); return; }
+            auto r = OlkFPC::get().requestAnalysis(std::move(m).unwrap());
+            if (!r) FLAlertLayer::create("Analyzer", r.unwrapErr(), "OK")->show();
+        });
 }
 
 void MainMenuUI::onExport(CCObject*) {
@@ -152,13 +154,16 @@ void MainMenuUI::onExport(CCObject*) {
     opts.defaultPath = "macro.json";
     opts.filters = {{"Macros", {"*.gdr", "*.json", "*.gdr2", "*.cml", "*.ttr3"}}};
     MacroData copy = m;
-    m_pick.bind([copy](auto* ev) {
-        auto* res = ev->getValue();
-        if (!res || !res->isOk()) return;
-        auto w = MacroParser::save(copy, res->unwrap());
-        Notification::create(w ? "Macro exported" : w.unwrapErr(), w ? NotificationIcon::Success : NotificationIcon::Error)->show();
-    });
-    m_pick.setFilter(file::pick(file::PickMode::SaveFile, opts));
+    async::spawn(
+        file::pick(file::PickMode::SaveFile, opts),
+        [copy](Result<std::optional<std::filesystem::path>> res) {
+            if (!res.isOk()) return;
+            auto opt = std::move(res).unwrap();
+            if (!opt) return;
+            auto w = MacroParser::save(copy, *opt);
+            std::string msg = w ? std::string("Macro exported") : std::string(w.unwrapErr());
+            Notification::create(msg, w ? NotificationIcon::Success : NotificationIcon::Error)->show();
+        });
 }
 
 }  // namespace fbfc
