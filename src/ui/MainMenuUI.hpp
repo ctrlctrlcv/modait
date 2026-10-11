@@ -4,10 +4,10 @@
 
 using namespace geode::prelude;
 
-class MainMenuUI : public geode::Popup {   // ← Sin <>
+class MainMenuUI : public geode::Popup {
 public:
     static MainMenuUI* create();
-    bool setup() override;
+    bool setup();                    // ← sin override
 
     void showCounterTab();
     void showInsightsTab();
@@ -21,6 +21,7 @@ public:
     void onPlayback(CCObject*);
     void onInsights(CCObject*);
     void onReload(CCObject*);
+    void onTabClicked(CCObject*);    // ← añadido
 
 private:
     int m_currentTab = 0;
