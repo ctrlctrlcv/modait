@@ -1,5 +1,6 @@
 #include "SoundManager.hpp"
 #include <Geode/utils/file.hpp>
+#include <Geode/binding/FMODAudioEngine.hpp>
 
 SoundManager* SoundManager::s_instance = nullptr;
 
@@ -12,17 +13,14 @@ void SoundManager::init() {
     if (m_initialized) return;
 
     // Ruta del sonido dentro de los recursos del mod
-    // En Geode, los recursos se acceden con el sufijo "_spr"
     m_soundPath = "bing.mp3"_spr;
 
-    // Verificar que el archivo existe
     auto path = Mod::get()->getResourcesDir() / "bing.mp3";
     if (!std::filesystem::exists(path)) {
         log::warn("OlkFPC: No se encontró bing.mp3 en resources/, usando sonido por defecto");
-        m_soundPath = "GJ_button01.ogg"; // Fallback a un sonido de GD
+        m_soundPath = "GJ_button01.ogg";
     }
 
-    // Precargar el sonido en FMOD
     auto engine = FMODAudioEngine::sharedEngine();
     if (engine) {
         engine->preloadEffect(m_soundPath);
@@ -35,11 +33,8 @@ void SoundManager::init() {
 float SoundManager::frameWindowToPitch(int frameWindow) const {
     if (!m_varyPitch) return 1.0f;
 
-    // Mapeo lineal: frame window 0 → pitch 1.5, 5+ → pitch 0.8
-    // Cada frame window reduce el pitch en 0.14
+    // Frame window 0 → pitch 1.5, 5+ → 0.8
     float pitch = 1.5f - (frameWindow * 0.14f);
-
-    // Clamp para evitar pitches extremos
     return std::clamp(pitch, 0.8f, 1.5f);
 }
 
@@ -49,36 +44,40 @@ void SoundManager::playClickSound(int frameWindow, const std::string& timing) {
     auto engine = FMODAudioEngine::sharedEngine();
     if (!engine) return;
 
-    // Calcular pitch según frame window
-    float pitch = frameWindowToPitch(frameWindow);
-
-    // El timing determina cuándo se reproduce el sonido
-    // En la práctica, "On Click" es el comportamiento por defecto
-    // "Before Click" y "After Click" requieren un pequeño delay
-    // "Perfect Frame" solo suena si frameWindow == 0
-
     if (timing == "Perfect Frame" && frameWindow != 0) {
-        return; // No reproducir si no es perfecto
+        return;
     }
 
-    // Reproducir con FMOD
-    // playEffectAdvanced(path, volume, pitch, pan, paused, ...)
+    float pitch = frameWindowToPitch(frameWindow);
+
+    // ✅ Firma completa de playEffectAdvanced (19 argumentos):
+    // (path, speed, unknown, volume, pitch, fft, reverb,
+    //  startMillis, endMillis, fadeIn, fadeOut, loop,
+    //  effectID, override, noPreload, channelID, uniqueID,
+    //  minInterval, sfxGroup)
     engine->playEffectAdvanced(
-        m_soundPath,
-        m_baseVolume,       // volumen
-        pitch,              // pitch
-        0.0f,               // pan (centro)
+        m_soundPath,        // path
         1.0f,               // speed
-        false,              // paused
-        false,              // loop
-        0,                  // loopStart
-        0,                  // loopEnd
-        false,              // forceLoad
-        0                   // uniqueID
+        1.0f,               // unknown
+        m_baseVolume,       // volume
+        pitch,              // pitch
+        false,              // fastFourierTransform
+        false,              // reverb
+        0,                  // startMillis
+        0,                  // endMillis
+        0,                  // fadeIn
+        0,                  // fadeOut
+        false,              // loopEnabled
+        0,                  // effectID
+        false,              // override
+        false,              // noPreload
+        0,                  // channelID
+        0,                  // uniqueID
+        0.0f,               // minInterval
+        0                   // sfxGroup
     );
 
-    log::debug("OlkFPC: Sonido reproducido - FW: {}, Pitch: {:.2f}, Timing: {}",
-        frameWindow, pitch, timing);
+    log::debug("OlkFPC: Sonido reproducido - FW: {}, Pitch: {:.2f}", frameWindow, pitch);
 }
 
 void SoundManager::playCustomSound(const std::string& path, float pitch, float volume) {
@@ -87,8 +86,20 @@ void SoundManager::playCustomSound(const std::string& path, float pitch, float v
 
     engine->playEffectAdvanced(
         path,
-        std::clamp(volume, 0.0f, 1.0f),
-        std::clamp(pitch, 0.1f, 3.0f),
-        0.0f, 1.0f, false, false, 0, 0, false, 0
+        1.0f,                                    // speed
+        1.0f,                                    // unknown
+        std::clamp(volume, 0.0f, 1.0f),          // volume
+        std::clamp(pitch, 0.1f, 3.0f),           // pitch
+        false,                                   // fastFourierTransform
+        false,                                   // reverb
+        0, 0, 0, 0,                              // startMillis, endMillis, fadeIn, fadeOut
+        false,                                   // loopEnabled
+        0,                                       // effectID
+        false,                                   // override
+        false,                                   // noPreload
+        0,                                       // channelID
+        0,                                       // uniqueID
+        0.0f,                                    // minInterval
+        0                                        // sfxGroup
     );
 }
