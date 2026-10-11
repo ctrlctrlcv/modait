@@ -91,12 +91,13 @@ class $modify(FBPlayLayer, PlayLayer) {
 
 // ---------------- Reproducción de macros ----------------
 class $modify(FBGameLayer, GJBaseGameLayer) {
-    void processCommands(float dt) {
-        if (!OlkFPC::get().isSimulating() && this == PlayLayer::get()) PlaybackController::get().inject(this);
-        GJBaseGameLayer::processCommands(dt);
+    void processCommands(float dt, bool isHalfTick, bool isLastTick) {
+        GJBaseGameLayer* self = this;
+        auto* real = static_cast<GJBaseGameLayer*>(PlayLayer::get());
+        if (!OlkFPC::get().isSimulating() && self == real) PlaybackController::get().inject(self);
+        GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
     }
 };
-
 // ---------------- Render a vídeo: dt fijo + captura tras dibujar ----------------
 class $modify(FBScheduler, CCScheduler) {
     void update(float dt) {
