@@ -2,6 +2,12 @@
 #include <Geode/utils/file.hpp>
 #include <Geode/utils/web.hpp>
 
+#ifdef _WIN32
+    #include <cstdio>
+    #define popen  _popen
+    #define pclose _pclose
+#endif
+
 RenderManager::RenderManager() = default;
 RenderManager::~RenderManager() { stopRender(); }
 
@@ -26,7 +32,6 @@ void RenderManager::startRender() {
     m_width = glView->getFrameSize().width;
     m_height = glView->getFrameSize().height;
 
-    // Abrir tubería a FFmpeg para inyectar frames raw
     std::string cmd = fmt::format("ffmpeg -y -f rawvideo -pix_fmt rgba -s {}x{} -r {} -i - {} {}",
         m_width, m_height, 240, getFFmpegArgs(), m_outputPath.string());
 
@@ -41,25 +46,31 @@ void RenderManager::startRender() {
 
 void RenderManager::captureFrame() {
     if (!m_isRendering || !m_ffmpegPipe) return;
-    
-    // Capturar el framebuffer real del juego
+
     std::vector<uint8_t> pixels(m_width * m_height * 4);
     glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    
+
     // Voltear verticalmente (OpenGL lee de abajo hacia arriba)
     std::vector<uint8_t> flipped(m_width * m_height * 4);
     for (int y = 0; y < m_height; ++y) {
-        std::memcpy(&flipped[y * m_width * 4], &pixels[(m_height - 1 - y) * m_width * 4], m_width * 4);
+        std::memcpy(&flipped[y * m_width * 4],
+                    &pixels[(m_height - 1 - y) * m_width * 4],
+                    m_width * 4);
     }
-    
+
     fwrite(flipped.data(), 1, flipped.size(), m_ffmpegPipe);
     m_frameCount++;
 }
 
 void RenderManager::stopRender() {
-    if (m_ffmpegPipe) { pclose(m_ffmpegPipe); m_ffmpegPipe = nullptr; }
+    if (m_ffmpegPipe) {
+        pclose(m_ffmpegPipe);
+        m_ffmpegPipe = nullptr;
+    }
     if (m_isRendering) {
-        Notification::create(fmt::format("Renderizado completo: {} frames", m_frameCount), NotificationIcon::Success)->show();
+        Notification::create(
+            fmt::format("Renderizado completo: {} frames", m_frameCount),
+            NotificationIcon::Success)->show();
         m_isRendering = false;
     }
 }
